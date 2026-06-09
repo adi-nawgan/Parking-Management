@@ -1,29 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../services/api';
-import { 
-  ClipboardList, 
-  Search, 
-  User, 
-  MapPin, 
-  Clock, 
-  Calendar,
+import {
+  ClipboardList,
   XCircle,
   RefreshCw
 } from 'lucide-react';
+import type { VisitorLog } from '../../types';
 
-const VisitorLogs = () => {
-  const [visitorLogs, setVisitorLogs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+const VisitorLogs: React.FC = () => {
+  const [visitorLogs, setVisitorLogs] = useState<VisitorLog[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
   // Filters state
-  const [plate, setPlate] = useState('');
-  const [flat, setFlat] = useState('');
-  const [building, setBuilding] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [plate, setPlate] = useState<string>('');
+  const [flat, setFlat] = useState<string>('');
+  const [building, setBuilding] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
-  const fetchVisitorLogs = async () => {
+  const fetchVisitorLogs = async (): Promise<void> => {
     setLoading(true);
     try {
       const queryParams = new URLSearchParams();
@@ -33,10 +29,10 @@ const VisitorLogs = () => {
       if (startDate) queryParams.append('startDate', startDate);
       if (endDate) queryParams.append('endDate', endDate);
 
-      const { data } = await API.get(`/visitors?${queryParams.toString()}`);
+      const { data } = await API.get<VisitorLog[]>(`/visitors?${queryParams.toString()}`);
       setVisitorLogs(data);
       setError('');
-    } catch (err) {
+    } catch {
       setError('Failed to fetch visitor records');
     } finally {
       setLoading(false);
@@ -45,9 +41,10 @@ const VisitorLogs = () => {
 
   useEffect(() => {
     fetchVisitorLogs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plate, flat, building, startDate, endDate]);
 
-  const clearFilters = () => {
+  const clearFilters = (): void => {
     setPlate('');
     setFlat('');
     setBuilding('');
@@ -55,35 +52,35 @@ const VisitorLogs = () => {
     setEndDate('');
   };
 
-  const formatDuration = (mins) => {
+  const formatDuration = (mins: number): string => {
     if (mins < 60) return `${mins} mins`;
     const hrs = Math.floor(mins / 60);
     const remainingMins = mins % 60;
     return `${hrs}h ${remainingMins}m`;
   };
 
-  const getActiveDuration = (entryTime) => {
-    const diffMs = new Date() - new Date(entryTime);
+  const getActiveDuration = (entryTime: string): string => {
+    const diffMs = new Date().getTime() - new Date(entryTime).getTime();
     const diffMins = Math.max(1, Math.round(diffMs / (1000 * 60)));
     return formatDuration(diffMins);
   };
 
-  const handleLogExit = async (plate) => {
-    if (!window.confirm(`Are you sure you want to log exit for vehicle ${plate}?`)) {
+  const handleLogExit = async (vehiclePlate: string): Promise<void> => {
+    if (!window.confirm(`Are you sure you want to log exit for vehicle ${vehiclePlate}?`)) {
       return;
     }
     try {
-      await API.post('/dashboard/exit', { plate });
+      await API.post('/dashboard/exit', { plate: vehiclePlate });
       fetchVisitorLogs();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to log vehicle exit');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Failed to log vehicle exit');
     }
   };
 
   return (
     <div className="space-y-8">
-      
-      {/* Header */}
+
       {/* Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Visitor Logs</h1>
@@ -94,7 +91,7 @@ const VisitorLogs = () => {
       <div className="glass-card rounded-2xl p-5 border border-slate-200 dark:border-white/5 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-2">
           <span className="text-xs font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider">Search Filters</span>
-          <button 
+          <button
             onClick={clearFilters}
             className="text-[11px] font-bold text-rose-450 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 flex items-center gap-1 transition-colors"
           >
@@ -103,24 +100,22 @@ const VisitorLogs = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Plate filter */}
           <div>
-            <label className="block text-[10px] font-semibold text-slate-550 dark:text-slate-400 uppercase mb-1">Plate Number</label>
+            <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Plate Number</label>
             <input
               type="text"
               value={plate}
-              onChange={(e) => setPlate(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlate(e.target.value)}
               placeholder="Enter Plate Number"
               className="w-full px-3 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-xs uppercase"
             />
           </div>
 
-          {/* Building filter */}
           <div>
             <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Building</label>
             <select
               value={building}
-              onChange={(e) => setBuilding(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setBuilding(e.target.value)}
               className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs"
             >
               <option value="">All Buildings</option>
@@ -130,36 +125,33 @@ const VisitorLogs = () => {
             </select>
           </div>
 
-          {/* Flat filter */}
           <div>
-            <label className="block text-[10px] font-semibold text-slate-555 dark:text-slate-400 uppercase mb-1">Flat Visited</label>
+            <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Flat Visited</label>
             <input
               type="text"
               value={flat}
-              onChange={(e) => setFlat(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFlat(e.target.value)}
               placeholder="Enter Flat Number"
               className="w-full px-3 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-xs"
             />
           </div>
 
-          {/* Start date */}
           <div>
-            <label className="block text-[10px] font-semibold text-slate-555 dark:text-slate-400 uppercase mb-1">Start Date</label>
+            <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Start Date</label>
             <input
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
               className="w-full px-3 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs"
             />
           </div>
 
-          {/* End date */}
           <div>
-            <label className="block text-[10px] font-semibold text-slate-555 dark:text-slate-400 uppercase mb-1">End Date</label>
+            <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">End Date</label>
             <input
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
               className="w-full px-3 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs"
             />
           </div>
@@ -175,11 +167,11 @@ const VisitorLogs = () => {
       {/* Logs Table */}
       <div className="glass-card rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-550 text-sm">
+          <div className="p-12 text-center text-slate-500 text-sm">
             Loading visitor records...
           </div>
         ) : visitorLogs.length === 0 ? (
-          <div className="p-12 text-center text-slate-550 text-sm space-y-2">
+          <div className="p-12 text-center text-slate-500 text-sm space-y-2">
             <ClipboardList className="w-12 h-12 text-slate-600 mx-auto" />
             <p className="font-semibold text-slate-500 dark:text-slate-400">No Visitor Logs Found</p>
             <p className="text-xs text-slate-500">There are no records matching your current filter choices.</p>
@@ -218,7 +210,7 @@ const VisitorLogs = () => {
                     <td className="py-4 px-6 text-slate-600 dark:text-slate-400 text-xs">
                       {new Date(log.entryTime).toLocaleString()}
                     </td>
-                    <td className="py-4 px-6 text-slate-650 dark:text-slate-400 text-xs">
+                    <td className="py-4 px-6 text-slate-600 dark:text-slate-400 text-xs">
                       {log.isCurrentlyInside ? (
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brandTeal-500/10 text-brandTeal-600 dark:text-brandTeal-400 border border-brandTeal-500/25 uppercase whitespace-nowrap">
@@ -232,11 +224,11 @@ const VisitorLogs = () => {
                           </button>
                         </div>
                       ) : (
-                        new Date(log.exitTime).toLocaleString()
+                        log.exitTime ? new Date(log.exitTime).toLocaleString() : '—'
                       )}
                     </td>
                     <td className="py-4 px-6 text-slate-700 dark:text-slate-300 font-medium">
-                      {log.isCurrentlyInside ? getActiveDuration(log.entryTime) : formatDuration(log.duration)}
+                      {log.isCurrentlyInside ? getActiveDuration(log.entryTime) : formatDuration(log.duration ?? 0)}
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex flex-wrap gap-1.5">
@@ -246,7 +238,7 @@ const VisitorLogs = () => {
                           </span>
                         )}
                         {log.isRepeatVisitor ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 dark:bg-purple-500/15 text-purple-750 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 uppercase flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 dark:bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 uppercase flex items-center gap-1">
                             <RefreshCw className="w-2.5 h-2.5" /> Repeat • {log.totalVisits} Visits
                           </span>
                         ) : (

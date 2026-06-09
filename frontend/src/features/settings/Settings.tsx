@@ -1,41 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../services/api';
-import { 
-  Settings as SettingsIcon, 
-  Save, 
-  ShieldAlert, 
-  Mail, 
-  Lock, 
+import {
+  Save,
+  ShieldAlert,
+  Mail,
+  Lock,
   Sliders,
   CheckCircle
 } from 'lucide-react';
+import type { SystemSettings } from '../../types';
 
-const Settings = () => {
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
+interface SettingsPayload {
+  totalCapacity: number;
+  overflowLimit: number;
+  overstayLimit: number;
+  adminEmail: string;
+  adminPassword?: string;
+}
+
+const Settings: React.FC = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [success, setSuccess] = useState<string>('');
+  const [error, setError] = useState<string>('');
 
   // Settings form states
-  const [totalCapacity, setTotalCapacity] = useState(60);
-  const [overflowLimit, setOverflowLimit] = useState(68);
-  const [overstayHours, setOverstayHours] = useState(24); // Stored in minutes on backend
-  const [adminEmail, setAdminEmail] = useState('');
-  
-  // Password updates
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [totalCapacity, setTotalCapacity] = useState<number>(60);
+  const [overflowLimit, setOverflowLimit] = useState<number>(68);
+  const [overstayHours, setOverstayHours] = useState<number>(24);
+  const [adminEmail, setAdminEmail] = useState<string>('');
 
-  const fetchSettings = async () => {
+  // Password updates
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+
+  const fetchSettings = async (): Promise<void> => {
     setLoading(true);
     try {
-      const { data } = await API.get('/settings');
+      const { data } = await API.get<SystemSettings>('/settings');
       setTotalCapacity(data.totalCapacity);
       setOverflowLimit(data.overflowLimit);
       setAdminEmail(data.adminEmail);
-      // Convert minutes from backend into hours for visual input
       setOverstayHours(data.overstayLimit ? Math.round(data.overstayLimit / 60) : 24);
       setError('');
-    } catch (err) {
+    } catch {
       setError('Failed to fetch settings from server');
     } finally {
       setLoading(false);
@@ -46,7 +53,7 @@ const Settings = () => {
     fetchSettings();
   }, []);
 
-  const handleSaveSettings = async (e) => {
+  const handleSaveSettings = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setSuccess('');
     setError('');
@@ -58,10 +65,10 @@ const Settings = () => {
 
     setLoading(true);
 
-    const payload = {
+    const payload: SettingsPayload = {
       totalCapacity: Number(totalCapacity),
       overflowLimit: Number(overflowLimit),
-      overstayLimit: Number(overstayHours) * 60, // convert back to minutes
+      overstayLimit: Number(overstayHours) * 60,
       adminEmail
     };
 
@@ -75,8 +82,9 @@ const Settings = () => {
       setNewPassword('');
       setConfirmPassword('');
       fetchSettings();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update system configurations');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || 'Failed to update system configurations');
     } finally {
       setLoading(false);
     }
@@ -84,7 +92,7 @@ const Settings = () => {
 
   return (
     <div className="space-y-8">
-      
+
       {/* Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">System Settings</h1>
@@ -104,7 +112,7 @@ const Settings = () => {
       )}
 
       <form onSubmit={handleSaveSettings} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Threshold Configuration Card */}
         <div className="lg:col-span-2 glass-card rounded-2xl p-6 border border-slate-200 dark:border-white/5 space-y-6">
           <div className="flex items-center gap-2 border-b border-slate-200 dark:border-white/5 pb-3">
@@ -112,9 +120,8 @@ const Settings = () => {
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Capacity & Alarm Boundaries</h2>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Total capacity */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
             <div>
               <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Marked Parking Capacity
@@ -122,9 +129,9 @@ const Settings = () => {
               <input
                 type="number"
                 required
-                min="1"
+                min={1}
                 value={totalCapacity}
-                onChange={(e) => setTotalCapacity(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalCapacity(Number(e.target.value))}
                 placeholder="Enter Capacity"
                 className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
               />
@@ -133,7 +140,6 @@ const Settings = () => {
               </p>
             </div>
 
-            {/* Overflow capacity */}
             <div>
               <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Critical Overflow Limit
@@ -143,7 +149,7 @@ const Settings = () => {
                 required
                 min={totalCapacity}
                 value={overflowLimit}
-                onChange={(e) => setOverflowLimit(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOverflowLimit(Number(e.target.value))}
                 placeholder="Enter Overflow Limit"
                 className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
               />
@@ -152,7 +158,6 @@ const Settings = () => {
               </p>
             </div>
 
-            {/* Overstay duration */}
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Maximum Park Duration (Hours)
@@ -160,9 +165,9 @@ const Settings = () => {
               <input
                 type="number"
                 required
-                min="1"
+                min={1}
                 value={overstayHours}
-                onChange={(e) => setOverstayHours(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOverstayHours(Number(e.target.value))}
                 placeholder="Enter Overstay Limit"
                 className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
               />
@@ -195,14 +200,14 @@ const Settings = () => {
                   type="email"
                   required
                   value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdminEmail(e.target.value)}
                   placeholder="Enter Admin Email"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
                 />
               </div>
             </div>
 
-            {/* Admin Password updates */}
+            {/* Admin Password */}
             <div>
               <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Change Password
@@ -214,7 +219,7 @@ const Settings = () => {
                 <input
                   type="password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
                 />
@@ -226,7 +231,7 @@ const Settings = () => {
                 <input
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm new password"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
                 />

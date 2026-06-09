@@ -1,13 +1,18 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import API from '../services/api';
 import useInactivity from '../hooks/useInactivity';
+import type { AuthContextType, AdminUser } from '../types';
 
-export const AuthContext = createContext();
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }) => {
-  const [admin, setAdmin] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [admin, setAdmin] = useState<AdminUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Initialize Auth State from localStorage
   useEffect(() => {
@@ -16,7 +21,7 @@ export const AuthProvider = ({ children }) => {
 
     if (storedToken && storedAdmin) {
       setToken(storedToken);
-      setAdmin(JSON.parse(storedAdmin));
+      setAdmin(JSON.parse(storedAdmin) as AdminUser);
     }
     setLoading(false);
   }, []);
@@ -50,18 +55,19 @@ export const AuthProvider = ({ children }) => {
   }, [logout]);
 
   // Login handler
-  const login = async (email, password) => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      const { data } = await API.post('/auth/login', { email, password });
-      
+      const { data } = await API.post<{ token: string; _id: string; email: string }>('/auth/login', { email, password });
+
       localStorage.setItem('spms_token', data.token);
       localStorage.setItem('spms_admin', JSON.stringify({ _id: data._id, email: data.email }));
-      
+
       setToken(data.token);
       setAdmin({ _id: data._id, email: data.email });
       return { success: true };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Login failed. Please check credentials.';
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      const message = err.response?.data?.message || 'Login failed. Please check credentials.';
       return { success: false, message };
     }
   };

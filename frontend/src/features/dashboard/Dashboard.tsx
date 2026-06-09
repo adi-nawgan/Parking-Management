@@ -1,50 +1,72 @@
-import React, { useState, useEffect, useRef } from 'react';
-import io from 'socket.io-client';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import io, { Socket } from 'socket.io-client';
 import API from '../../services/api';
-import { 
-  Car, 
-  Search, 
-  Plus, 
-  LogOut, 
-  AlertTriangle, 
-  CheckCircle2, 
-  HelpCircle,
-  Clock, 
-  Calendar,
+import { ThemeContext } from '../../context/ThemeContext';
+import {
+  Car,
+  Search,
+  Plus,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
   X,
-  UserCheck
+  UserCheck,
+  Sun,
+  Moon
 } from 'lucide-react';
+import type { ParkedVehicle, PlateSearchMatch, DashboardSummary } from '../../types';
 
-const Dashboard = () => {
+type ParkingState = 'normal' | 'overflow' | 'full';
+
+interface VisitorFormDetails {
+  name: string;
+  buildingVisited: number;
+  flatVisited: string;
+  purpose: string;
+}
+
+interface StateConfig {
+  barColor: string;
+  bgColor: string;
+  borderColor: string;
+  textColor: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+const Dashboard: React.FC = () => {
+  const themeCtx = useContext(ThemeContext);
+  if (!themeCtx) throw new Error('Dashboard must be inside ThemeProvider');
+  const { theme, toggleTheme } = themeCtx;
+
   // Stats states
-  const [capacity, setCapacity] = useState(60);
-  const [overflowLimit, setOverflowLimit] = useState(68);
-  const [overstayLimit, setOverstayLimit] = useState(1440); // 24 hours
-  const [parkedCount, setParkedCount] = useState(0);
-  const [available, setAvailable] = useState(60);
-  const [state, setState] = useState('normal'); // normal, overflow, full
-  const [parkedList, setParkedList] = useState([]);
-  
+  const [capacity, setCapacity] = useState<number>(60);
+  const [overflowLimit, setOverflowLimit] = useState<number>(68);
+  const [overstayLimit, setOverstayLimit] = useState<number>(1440);
+  const [parkedCount, setParkedCount] = useState<number>(0);
+  const [available, setAvailable] = useState<number>(60);
+  const [state, setState] = useState<ParkingState>('normal');
+  const [parkedList, setParkedList] = useState<ParkedVehicle[]>([]);
+
   // Modals & forms
-  const [showEntryModal, setShowEntryModal] = useState(false);
-  const [showExitModal, setShowExitModal] = useState(false);
-  const [plateQuery, setPlateQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  
+  const [showEntryModal, setShowEntryModal] = useState<boolean>(false);
+  const [plateQuery, setPlateQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<PlateSearchMatch[]>([]);
+
   // Entry Form values
-  const [entryPlate, setEntryPlate] = useState('');
-  const [entryType, setEntryType] = useState('visitor'); // resident, tenant, visitor
-  const [entryBuilding, setEntryBuilding] = useState(28);
-  const [entryFlat, setEntryFlat] = useState('');
-  const [residentId, setResidentId] = useState(null);
-  const [visitorDetails, setVisitorDetails] = useState({ name: '', buildingVisited: 28, flatVisited: '', purpose: '' });
-  const [formError, setFormError] = useState('');
-  
-  // Exit Form values
-  const [exitPlate, setExitPlate] = useState('');
-  
-  const socketRef = useRef();
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [entryPlate, setEntryPlate] = useState<string>('');
+  const [entryType, setEntryType] = useState<'resident' | 'tenant' | 'visitor'>('visitor');
+  const [entryBuilding, setEntryBuilding] = useState<number>(28);
+  const [entryFlat, setEntryFlat] = useState<string>('');
+  const [residentId, setResidentId] = useState<string | null>(null);
+  const [visitorDetails, setVisitorDetails] = useState<VisitorFormDetails>({ name: '', buildingVisited: 28, flatVisited: '', purpose: '' });
+  const [formError, setFormError] = useState<string>('');
+
+  const socketRef = useRef<Socket | null>(null);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+
+  // Suppress unused warning — plateQuery drives the search via handlePlateSearch
+  void plateQuery;
 
   // Periodically refresh elapsed times
   useEffect(() => {
@@ -52,10 +74,9 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch Dashboard summary data
-  const fetchSummary = async () => {
+  const fetchSummary = async (): Promise<void> => {
     try {
-      const { data } = await API.get('/dashboard/summary');
+      const { data } = await API.get<DashboardSummary>('/dashboard/summary');
       setCapacity(data.totalCapacity);
       setOverflowLimit(data.overflowLimit);
       setParkedCount(data.currentlyParkedCount);
@@ -63,36 +84,33 @@ const Dashboard = () => {
       setState(data.state);
       setParkedList(data.currentlyParkedList);
 
-      // Fetch global settings to get overstay threshold
-      const settingsRes = await API.get('/settings');
+      const settingsRes = await API.get<{ overstayLimit: number }>('/settings');
       setOverstayLimit(settingsRes.data.overstayLimit);
     } catch (err) {
       console.error('Failed to load dashboard summaries:', err);
     }
   };
 
-  // Socket.io integration
   useEffect(() => {
     fetchSummary();
 
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
     socketRef.current = io(socketUrl);
 
-    socketRef.current.on('capacityUpdate', (data) => {
+    socketRef.current.on('capacityUpdate', (data: Partial<DashboardSummary>) => {
       if (data.currentlyParkedCount !== undefined) setParkedCount(data.currentlyParkedCount);
       if (data.availableSpots !== undefined) setAvailable(data.availableSpots);
       if (data.state !== undefined) setState(data.state);
     });
 
-    socketRef.current.on('vehicleEntry', (entry) => {
+    socketRef.current.on('vehicleEntry', (entry: ParkedVehicle) => {
       setParkedList((prev) => {
-        // Prevent duplicate append
         if (prev.find(p => p._id === entry._id)) return prev;
         return [entry, ...prev];
       });
     });
 
-    socketRef.current.on('vehicleExit', (exitLog) => {
+    socketRef.current.on('vehicleExit', (exitLog: { plate: string }) => {
       setParkedList((prev) => prev.filter(p => p.plate !== exitLog.plate));
     });
 
@@ -101,11 +119,12 @@ const Dashboard = () => {
         socketRef.current.disconnect();
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Real-time lookup as typing in plate entry field
-  const handlePlateSearch = async (val) => {
+  const handlePlateSearch = async (val: string): Promise<void> => {
     setEntryPlate(val);
+    setPlateQuery(val);
     if (!val || val.trim() === '') {
       setSearchResults([]);
       setEntryType('visitor');
@@ -114,10 +133,9 @@ const Dashboard = () => {
     }
 
     try {
-      const { data } = await API.get(`/dashboard/search-plate?plate=${val}`);
+      const { data } = await API.get<PlateSearchMatch[]>(`/dashboard/search-plate?plate=${val}`);
       setSearchResults(data);
-      
-      // Auto-fill exactly if unique match is made
+
       if (data.length === 1 && data[0].vehicle.plate === val.toUpperCase()) {
         selectResidentVehicle(data[0]);
       }
@@ -126,7 +144,7 @@ const Dashboard = () => {
     }
   };
 
-  const selectResidentVehicle = (match) => {
+  const selectResidentVehicle = (match: PlateSearchMatch): void => {
     setEntryPlate(match.vehicle.plate);
     setEntryType(match.type);
     setEntryFlat(match.flatNumber);
@@ -135,7 +153,7 @@ const Dashboard = () => {
     setSearchResults([]);
   };
 
-  const submitVehicleEntry = async (e) => {
+  const submitVehicleEntry = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setFormError('');
 
@@ -164,8 +182,6 @@ const Dashboard = () => {
 
     try {
       await API.post('/dashboard/entry', payload);
-      
-      // Reset entry forms
       setEntryPlate('');
       setEntryFlat('');
       setEntryBuilding(28);
@@ -173,25 +189,26 @@ const Dashboard = () => {
       setVisitorDetails({ name: '', buildingVisited: 28, flatVisited: '', purpose: '' });
       setEntryType('visitor');
       setShowEntryModal(false);
-    } catch (err) {
-      setFormError(err.response?.data?.message || 'Error processing entry');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setFormError(e.response?.data?.message || 'Error processing entry');
     }
   };
 
-  const submitVehicleExit = async (plate) => {
+  const submitVehicleExit = async (plate: string): Promise<void> => {
     try {
       await API.post('/dashboard/exit', { plate });
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to log exit');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Failed to log exit');
     }
   };
 
-  // Calculate duration elapsed since entry
-  const getElapsedTime = (entryTime) => {
+  const getElapsedTime = (entryTime: string): string => {
     const start = new Date(entryTime);
-    const diffMs = currentTime - start;
+    const diffMs = currentTime.getTime() - start.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
-    
+
     if (diffMins < 60) {
       return `${diffMins} mins`;
     }
@@ -200,16 +217,14 @@ const Dashboard = () => {
     return `${hrs}h ${mins}m`;
   };
 
-  // Determine if vehicle is overstaying
-  const isOverstaying = (entryTime) => {
+  const isOverstaying = (entryTime: string): boolean => {
     if (!overstayLimit) return false;
-    const diffMs = currentTime - new Date(entryTime);
+    const diffMs = currentTime.getTime() - new Date(entryTime).getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
     return diffMins > overstayLimit;
   };
 
-  // Visual state classes
-  const stateConfig = {
+  const stateConfig: Record<ParkingState, StateConfig> = {
     normal: {
       barColor: 'bg-brandTeal-500',
       bgColor: 'bg-brandTeal-500/10',
@@ -236,15 +251,14 @@ const Dashboard = () => {
     }
   };
 
-  const currentSettings = stateConfig[state] || stateConfig.normal;
+  const currentSettings = stateConfig[state] ?? stateConfig.normal;
   const BarIcon = currentSettings.icon;
 
-  // Percentage for progress bar
   const fillPercentage = Math.min(100, Math.round((parkedCount / overflowLimit) * 100));
 
   return (
     <div className="space-y-8">
-      
+
       {/* Alert Header for Overflow states */}
       {state !== 'normal' && (
         <div className={`p-4 rounded-2xl border ${currentSettings.borderColor} ${currentSettings.bgColor} flex items-center justify-between gap-4 animate-bounce`}>
@@ -255,8 +269,8 @@ const Dashboard = () => {
                 {currentSettings.label} Status Triggered
               </p>
               <p className="text-xs text-slate-600 dark:text-slate-300">
-                {state === 'full' 
-                  ? 'The parking has reached critical overflow capacity limit. Enforce exit procedures and restrict new entry.' 
+                {state === 'full'
+                  ? 'The parking has reached critical overflow capacity limit. Enforce exit procedures and restrict new entry.'
                   : 'Vehicles parked exceed standard marked spots. Overflow mode is active.'}
               </p>
             </div>
@@ -272,7 +286,15 @@ const Dashboard = () => {
           <p className="text-slate-500 dark:text-slate-400 text-sm">Real-time surveillance console for residential parking spaces.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
+          <button
+            onClick={toggleTheme}
+            className="w-12 h-12 rounded-xl bg-white dark:bg-darkCard border border-violet-100/75 dark:border-brandPurple-500/10 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all duration-200 shadow-sm"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400 animate-pulse-slow" /> : <Moon className="w-5 h-5 text-slate-500" />}
+          </button>
+
+          <button
             onClick={() => setShowEntryModal(true)}
             className="px-5 py-3 bg-brandPurple-600 hover:bg-brandPurple-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg shadow-brandPurple-500/15"
           >
@@ -283,8 +305,7 @@ const Dashboard = () => {
 
       {/* KPI Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Capacity Limit Card */}
+
         <div className="glass-card rounded-2xl p-6 border border-slate-200 dark:border-white/5 flex flex-col justify-between">
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Stalls Capacity</p>
           <div className="flex items-baseline justify-between mt-4">
@@ -293,16 +314,14 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Occupied Card */}
         <div className={`glass-card rounded-2xl p-6 border ${state === 'full' ? 'border-rose-500/50 glow-red-pulse' : 'border-slate-200 dark:border-white/5'} flex flex-col justify-between`}>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Currently Inside</p>
           <div className="flex items-baseline justify-between mt-4">
             <span className="text-4xl font-extrabold text-slate-900 dark:text-white">{parkedCount}</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Occupancy: {Math.round((parkedCount/capacity)*100)}%</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Occupancy: {Math.round((parkedCount / capacity) * 100)}%</span>
           </div>
         </div>
 
-        {/* Available Card */}
         <div className="glass-card rounded-2xl p-6 border border-slate-200 dark:border-white/5 flex flex-col justify-between">
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Available Slots</p>
           <div className="flex items-baseline justify-between mt-4">
@@ -322,16 +341,14 @@ const Dashboard = () => {
           </div>
           <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{parkedCount} occupied / {capacity} marked spots</span>
         </div>
-        
-        {/* Progress tracks */}
+
         <div className="w-full bg-slate-100 dark:bg-white/5 rounded-full h-4 overflow-hidden border border-slate-200 dark:border-white/5">
-          <div 
-            className={`h-full transition-all duration-500 ease-out ${currentSettings.barColor}`} 
+          <div
+            className={`h-full transition-all duration-500 ease-out ${currentSettings.barColor}`}
             style={{ width: `${fillPercentage}%` }}
           ></div>
         </div>
 
-        {/* Legend labels */}
         <div className="flex justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400 px-1 pt-1">
           <span className="text-brandTeal-600 dark:text-brandTeal-400 flex items-center gap-1">🟢 Normal (Under {capacity})</span>
           <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">🟡 Overflow ({capacity} to {overflowLimit - 1})</span>
@@ -341,7 +358,7 @@ const Dashboard = () => {
 
       {/* Live List of Occupied Vehicles */}
       <div className="glass-card rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden">
-        
+
         <div className="p-6 border-b border-slate-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Currently Parked Vehicles</h2>
@@ -377,9 +394,9 @@ const Dashboard = () => {
                 {parkedList.map((veh) => {
                   const overstay = isOverstaying(veh.entryTime);
                   const isVisitor = veh.type === 'visitor';
-                  
+
                   return (
-                    <tr 
+                    <tr
                       key={veh._id}
                       className={`
                         transition-colors hover:bg-slate-100/30 dark:hover:bg-white/[0.02]
@@ -408,7 +425,7 @@ const Dashboard = () => {
                       </td>
                       <td className="py-4 px-6 font-semibold">Bldg {veh.buildingNumber} • Flat {veh.flatNumber}</td>
                       <td className="py-4 px-6 text-slate-600 dark:text-slate-300">
-                        {isVisitor 
+                        {isVisitor
                           ? <div>
                               <p className="font-semibold text-slate-800 dark:text-slate-200">{veh.visitorDetails?.name}</p>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400">{veh.visitorDetails?.purpose}</p>
@@ -443,7 +460,7 @@ const Dashboard = () => {
       {showEntryModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-lg glass-card rounded-3xl p-6 border border-slate-200/50 dark:border-white/10 shadow-2xl relative animate-fadeIn">
-            <button 
+            <button
               onClick={() => {
                 setShowEntryModal(false);
                 setFormError('');
@@ -463,10 +480,10 @@ const Dashboard = () => {
             )}
 
             <form onSubmit={submitVehicleEntry} className="space-y-4">
-              
+
               {/* Plate search */}
               <div className="relative">
-                <label className="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Plate Number
                 </label>
                 <div className="relative">
@@ -477,13 +494,13 @@ const Dashboard = () => {
                     type="text"
                     required
                     value={entryPlate}
-                    onChange={(e) => handlePlateSearch(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePlateSearch(e.target.value)}
                     placeholder="Enter Plate Number"
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 uppercase tracking-widest text-sm"
                   />
                 </div>
 
-                {/* Auto complete search dropdown list */}
+                {/* Auto complete dropdown */}
                 {searchResults.length > 0 && (
                   <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden z-50 divide-y divide-slate-100 dark:divide-slate-700 max-h-48 overflow-y-auto">
                     {searchResults.map((match) => (
@@ -506,13 +523,13 @@ const Dashboard = () => {
                 )}
               </div>
 
-              {/* Classification Type Display */}
+              {/* Classification Type */}
               <div>
-                <span className="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  Vehicle Type classification
+                <span className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Vehicle Type Classification
                 </span>
                 <div className="flex gap-2">
-                  {['resident', 'tenant', 'visitor'].map(t => (
+                  {(['resident', 'tenant', 'visitor'] as const).map(t => (
                     <button
                       type="button"
                       key={t}
@@ -525,9 +542,9 @@ const Dashboard = () => {
                       }}
                       className={`
                         flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase transition-all duration-200 border
-                        ${entryType === t 
-                          ? 'bg-brandPurple-600 border-brandPurple-600 text-white font-black' 
-                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-505 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}
+                        ${entryType === t
+                          ? 'bg-brandPurple-600 border-brandPurple-600 text-white font-black'
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}
                       `}
                     >
                       {t}
@@ -536,9 +553,9 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Resident Info Inputs */}
+              {/* Resident Info */}
               {entryType !== 'visitor' ? (
-                <div className="grid grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 animate-fadeIn">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 animate-fadeIn">
                   <div>
                     <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Building</label>
                     <input
@@ -549,7 +566,7 @@ const Dashboard = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-550 dark:text-slate-400 mb-1">Flat Number</label>
+                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Flat Number</label>
                     <input
                       type="text"
                       disabled
@@ -558,36 +575,36 @@ const Dashboard = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-550 dark:text-slate-400 mb-1 font-semibold text-brandPurple-600 dark:text-brandPurple-400">Status Check</label>
+                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1 font-semibold text-brandPurple-600 dark:text-brandPurple-400">Status Check</label>
                     <div className="w-full px-3 py-2 bg-brandPurple-500/10 border border-brandPurple-500/25 rounded-lg text-brandPurple-600 dark:text-brandPurple-400 font-bold text-[11px] uppercase text-center flex items-center justify-center">
                       ✓ Resident
                     </div>
                   </div>
                 </div>
               ) : (
-                /* Visitor Info Inputs */
+                /* Visitor Info */
                 <div className="space-y-3 p-4 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 animate-fadeIn">
                   <span className="block text-xs font-bold text-slate-800 dark:text-slate-300 border-b border-slate-200 dark:border-white/5 pb-1 mb-2">
                     Visitor Entry Information
                   </span>
-                  
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-3">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="col-span-1 sm:col-span-3">
                       <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Visitor Full Name</label>
                       <input
                         type="text"
                         required
                         value={visitorDetails.name}
-                        onChange={(e) => setVisitorDetails({ ...visitorDetails, name: e.target.value })}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVisitorDetails({ ...visitorDetails, name: e.target.value })}
                         placeholder="Enter Visitor Name"
                         className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Visiting Building</label>
                       <select
                         value={visitorDetails.buildingVisited}
-                        onChange={(e) => setVisitorDetails({ ...visitorDetails, buildingVisited: Number(e.target.value) })}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVisitorDetails({ ...visitorDetails, buildingVisited: Number(e.target.value) })}
                         className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
                       >
                         {[28, 29, 30, 31, 32, 33, 34, 35, 36, 37].map(num => (
@@ -601,7 +618,7 @@ const Dashboard = () => {
                         type="text"
                         required
                         value={visitorDetails.flatVisited}
-                        onChange={(e) => setVisitorDetails({ ...visitorDetails, flatVisited: e.target.value })}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVisitorDetails({ ...visitorDetails, flatVisited: e.target.value })}
                         placeholder="Flat"
                         className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
                       />
@@ -613,7 +630,7 @@ const Dashboard = () => {
                     <input
                       type="text"
                       value={visitorDetails.purpose}
-                      onChange={(e) => setVisitorDetails({ ...visitorDetails, purpose: e.target.value })}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVisitorDetails({ ...visitorDetails, purpose: e.target.value })}
                       placeholder="Enter Purpose of Visit"
                       className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
                     />

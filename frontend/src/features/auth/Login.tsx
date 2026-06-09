@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ShieldAlert, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
-const Login = () => {
-  const { login } = useContext(AuthContext);
+const Login: React.FC = () => {
+  const authCtx = useContext(AuthContext);
+  if (!authCtx) throw new Error('Login must be inside AuthProvider');
+  const { login } = authCtx;
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!email || !password) {
       setError('Please fill in all fields');
@@ -29,7 +31,7 @@ const Login = () => {
     if (res.success) {
       navigate('/');
     } else {
-      setError(res.message);
+      setError(res.message ?? 'Login failed');
     }
   };
 
@@ -40,7 +42,7 @@ const Login = () => {
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-brandTeal-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
 
       <div className="w-full max-w-md glass-card rounded-3xl p-8 shadow-2xl relative z-10">
-        
+
         {/* Header Title */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-14 h-14 bg-brandPurple-500/10 border border-brandPurple-500/20 rounded-2xl flex items-center justify-center mb-4">
@@ -70,7 +72,7 @@ const Login = () => {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 placeholder="Enter Email Address"
                 className="w-full pl-11 pr-4 py-3 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
               />
@@ -88,7 +90,7 @@ const Login = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full pl-11 pr-11 py-3 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
               />

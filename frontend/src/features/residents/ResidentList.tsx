@@ -1,44 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../services/api';
-import { 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  Car, 
-  UserPlus, 
-  X, 
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  UserPlus,
+  X,
   Phone,
   Hash,
-  AlertTriangle
 } from 'lucide-react';
+import type { Resident, Vehicle } from '../../types';
 
-const ResidentList = () => {
-  const [residents, setResidents] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+const ResidentList: React.FC = () => {
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [search, setSearch] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
   // CRUD Modal states
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // create, edit
-  const [currentId, setCurrentId] = useState(null);
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [currentId, setCurrentId] = useState<string | null>(null);
 
   // Form states
-  const [buildingNumber, setBuildingNumber] = useState(28);
-  const [flatNumber, setFlatNumber] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [type, setType] = useState('resident');
-  const [vehicles, setVehicles] = useState([]); // Array of { plate, vehicleType, color }
+  const [buildingNumber, setBuildingNumber] = useState<number>(28);
+  const [flatNumber, setFlatNumber] = useState<string>('');
+  const [ownerName, setOwnerName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [type, setType] = useState<'resident' | 'tenant'>('resident');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
-  const fetchResidents = async () => {
+  const fetchResidents = async (): Promise<void> => {
     setLoading(true);
     try {
-      const { data } = await API.get(`/residents?search=${search}`);
+      const { data } = await API.get<Resident[]>(`/residents?search=${search}`);
       setResidents(data);
       setError('');
-    } catch (err) {
+    } catch {
       setError('Failed to load resident files');
     } finally {
       setLoading(false);
@@ -47,9 +46,10 @@ const ResidentList = () => {
 
   useEffect(() => {
     fetchResidents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  const openCreateModal = () => {
+  const openCreateModal = (): void => {
     setModalMode('create');
     setBuildingNumber(28);
     setFlatNumber('');
@@ -60,7 +60,7 @@ const ResidentList = () => {
     setShowModal(true);
   };
 
-  const openEditModal = (res) => {
+  const openEditModal = (res: Resident): void => {
     setModalMode('edit');
     setCurrentId(res._id);
     setBuildingNumber(res.buildingNumber || 28);
@@ -68,22 +68,21 @@ const ResidentList = () => {
     setOwnerName(res.ownerName);
     setPhone(res.phone);
     setType(res.type);
-    // Seed vehicles, ensuring at least one vehicle input exists
     setVehicles(res.vehicles.length > 0 ? [...res.vehicles] : [{ plate: '', vehicleType: 'Car', color: '' }]);
     setShowModal(true);
   };
 
-  const handleAddVehicleField = () => {
+  const handleAddVehicleField = (): void => {
     if (vehicles.length >= 3) return;
     setVehicles([...vehicles, { plate: '', vehicleType: 'Car', color: '' }]);
   };
 
-  const handleRemoveVehicleField = (index) => {
+  const handleRemoveVehicleField = (index: number): void => {
     const updated = vehicles.filter((_, idx) => idx !== index);
     setVehicles(updated);
   };
 
-  const handleVehicleChange = (index, field, value) => {
+  const handleVehicleChange = (index: number, field: keyof Vehicle, value: string): void => {
     const updated = vehicles.map((v, idx) => {
       if (idx === index) {
         return { ...v, [field]: value };
@@ -93,11 +92,10 @@ const ResidentList = () => {
     setVehicles(updated);
   };
 
-  const submitForm = async (e) => {
+  const submitForm = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError('');
 
-    // Clean vehicles: filter out items with empty plates
     const cleanVehicles = vehicles.filter(v => v.plate && v.plate.trim() !== '');
 
     const payload = {
@@ -117,26 +115,28 @@ const ResidentList = () => {
       }
       setShowModal(false);
       fetchResidents();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error processing request');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || 'Error processing request');
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string): Promise<void> => {
     if (!window.confirm('Are you sure you want to remove this resident/tenant profile? All vehicle logs will be unlinked.')) {
       return;
     }
     try {
       await API.delete(`/residents/${id}`);
       fetchResidents();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Delete operation failed');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      alert(e.response?.data?.message || 'Delete operation failed');
     }
   };
 
   return (
     <div className="space-y-8">
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -159,7 +159,7 @@ const ResidentList = () => {
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
           placeholder="Search by Flat, Owner Name, or Plate..."
           className="w-full pl-11 pr-4 py-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
         />
@@ -183,14 +183,14 @@ const ResidentList = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {residents.map((res) => (
-            <div 
+            <div
               key={res._id}
               className={`
                 glass-card rounded-2xl p-6 border transition-all duration-300 flex flex-col justify-between gap-6
                 ${res.isParked ? 'border-brandTeal-500/40 shadow-lg shadow-brandTeal-500/[0.03]' : 'border-slate-200 dark:border-white/5'}
               `}
             >
-              
+
               {/* Header Profile */}
               <div className="flex justify-between items-start gap-4">
                 <div className="space-y-1">
@@ -209,7 +209,7 @@ const ResidentList = () => {
                   </div>
                 </div>
 
-                {/* Parked status check indicator */}
+                {/* Parked status indicator */}
                 {res.isParked ? (
                   <span className="px-2.5 py-1 bg-brandTeal-500/10 text-brandTeal-400 border border-brandTeal-500/20 text-xs font-semibold rounded-lg flex items-center gap-1.5 animate-pulse">
                     🟢 Parked Inside
@@ -229,12 +229,12 @@ const ResidentList = () => {
                     {res.vehicles.map((v) => {
                       const currentlyParkedInside = res.parkedVehicles?.includes(v.plate);
                       return (
-                        <div 
+                        <div
                           key={v._id || v.plate}
                           className={`
                             p-3 rounded-xl border flex flex-col justify-center relative overflow-hidden
-                            ${currentlyParkedInside 
-                              ? 'bg-brandTeal-500/10 border-brandTeal-500/30 text-brandTeal-600 dark:text-brandTeal-400' 
+                            ${currentlyParkedInside
+                              ? 'bg-brandTeal-500/10 border-brandTeal-500/30 text-brandTeal-600 dark:text-brandTeal-400'
                               : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300'}
                           `}
                         >
@@ -274,7 +274,7 @@ const ResidentList = () => {
       {showModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-xl glass-card rounded-3xl p-6 border border-slate-200/50 dark:border-white/10 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-fadeIn">
-            <button 
+            <button
               onClick={() => setShowModal(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 dark:hover:text-white"
             >
@@ -286,16 +286,16 @@ const ResidentList = () => {
             </h3>
 
             <form onSubmit={submitForm} className="space-y-4">
-              
-              {/* Main Fields */}
-              <div className="grid grid-cols-3 gap-4">
+
+              {/* Main Fields - Row 1: Building + Flat */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Building Number
                   </label>
                   <select
                     value={buildingNumber}
-                    onChange={(e) => setBuildingNumber(Number(e.target.value))}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setBuildingNumber(Number(e.target.value))}
                     className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-sm"
                   >
                     {[28, 29, 30, 31, 32, 33, 34, 35, 36, 37].map(num => (
@@ -311,24 +311,26 @@ const ResidentList = () => {
                     type="text"
                     required
                     value={flatNumber}
-                    onChange={(e) => setFlatNumber(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFlatNumber(e.target.value)}
                     placeholder="Enter Flat Number"
                     className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                    Occupancy Classification
-                  </label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-sm"
-                  >
-                    <option value="resident">Resident Owner</option>
-                    <option value="tenant">Tenant / Renter</option>
-                  </select>
-                </div>
+              </div>
+
+              {/* Main Fields - Row 2: Occupancy Classification (full width) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Occupancy Classification
+                </label>
+                <select
+                  value={type}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value as 'resident' | 'tenant')}
+                  className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-sm"
+                >
+                  <option value="resident">Resident Owner</option>
+                  <option value="tenant">Tenant / Renter</option>
+                </select>
               </div>
 
               <div>
@@ -339,7 +341,7 @@ const ResidentList = () => {
                   type="text"
                   required
                   value={ownerName}
-                  onChange={(e) => setOwnerName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOwnerName(e.target.value)}
                   placeholder="Enter Occupant Name"
                   className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
                 />
@@ -353,7 +355,7 @@ const ResidentList = () => {
                   type="tel"
                   required
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
                   placeholder="Enter Phone Contact"
                   className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm"
                 />
@@ -377,9 +379,9 @@ const ResidentList = () => {
                 </div>
 
                 {vehicles.map((veh, index) => (
-                  <div 
+                  <div
                     key={index}
-                    className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end p-3 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 relative group animate-fadeIn"
+                    className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center p-3 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 relative group animate-fadeIn"
                   >
                     <div>
                       <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Plate Number</label>
@@ -387,7 +389,7 @@ const ResidentList = () => {
                         type="text"
                         required
                         value={veh.plate}
-                        onChange={(e) => handleVehicleChange(index, 'plate', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleVehicleChange(index, 'plate', e.target.value)}
                         placeholder="Enter Plate Number"
                         className="w-full px-2 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs uppercase"
                       />
@@ -396,7 +398,7 @@ const ResidentList = () => {
                       <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Body Type</label>
                       <select
                         value={veh.vehicleType}
-                        onChange={(e) => handleVehicleChange(index, 'vehicleType', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleVehicleChange(index, 'vehicleType', e.target.value)}
                         className="w-full px-2 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs"
                       >
                         <option value="Car">Car</option>
@@ -410,7 +412,7 @@ const ResidentList = () => {
                         type="text"
                         required
                         value={veh.color}
-                        onChange={(e) => handleVehicleChange(index, 'color', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleVehicleChange(index, 'color', e.target.value)}
                         placeholder="Enter Color"
                         className="w-full px-2 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs"
                       />

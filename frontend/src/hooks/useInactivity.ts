@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 
-const useInactivity = (logoutCallback, timeoutMs = 30 * 60 * 1000) => {
-  const timeoutRef = useRef(null);
+const useInactivity = (logoutCallback: () => void, timeoutMs: number = 30 * 60 * 1000): void => {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetTimer = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       console.log('[Inactivity Monitor] 30 minutes of inactivity reached. Logging out...');
       logoutCallback();
@@ -16,7 +16,7 @@ const useInactivity = (logoutCallback, timeoutMs = 30 * 60 * 1000) => {
 
   useEffect(() => {
     // List of events that indicate user activity
-    const events = [
+    const events: string[] = [
       'mousemove',
       'mousedown',
       'keypress',
@@ -42,6 +42,7 @@ const useInactivity = (logoutCallback, timeoutMs = 30 * 60 * 1000) => {
         window.removeEventListener(event, resetTimer);
       });
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logoutCallback, timeoutMs]);
 };
 

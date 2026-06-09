@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Layout from './components/Layout';
@@ -10,55 +10,60 @@ import ResidentList from './features/residents/ResidentList';
 import VisitorLogs from './features/visitors/VisitorLogs';
 import LogList from './features/logs/LogList';
 import Settings from './features/settings/Settings';
+import { ThemeProvider } from './context/ThemeContext';
+
+interface RouteGuardProps {
+  children: ReactNode;
+}
 
 // Protected Route Shield
-const ProtectedRoute = ({ children }) => {
-  const { token, loading } = useContext(AuthContext);
+const ProtectedRoute: React.FC<RouteGuardProps> = ({ children }) => {
+  const authCtx = useContext(AuthContext);
 
-  if (loading) {
+  if (!authCtx || authCtx.loading) {
     return <div className="min-h-screen bg-darkBg text-slate-400 flex items-center justify-center">Loading security session...</div>;
   }
 
-  if (!token) {
+  if (!authCtx.token) {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return <>{children}</>;
 };
 
 // Public Route Shield (prevents access to Login while already logged in)
-const PublicRoute = ({ children }) => {
-  const { token, loading } = useContext(AuthContext);
+const PublicRoute: React.FC<RouteGuardProps> = ({ children }) => {
+  const authCtx = useContext(AuthContext);
 
-  if (loading) {
+  if (!authCtx || authCtx.loading) {
     return <div className="min-h-screen bg-darkBg text-slate-400 flex items-center justify-center">Loading security session...</div>;
   }
 
-  if (token) {
+  if (authCtx.token) {
     return <Navigate to="/" replace />;
   }
 
-  return children;
+  return <>{children}</>;
 };
 
-const AppContent = () => {
+const AppContent: React.FC = () => {
   return (
     <Router>
       <Routes>
-        
+
         {/* Public auth paths */}
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             <PublicRoute>
               <Login />
             </PublicRoute>
-          } 
+          }
         />
 
         {/* Private console paths */}
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             <ProtectedRoute>
               <Layout />
@@ -80,9 +85,7 @@ const AppContent = () => {
   );
 };
 
-import { ThemeProvider } from './context/ThemeContext';
-
-const App = () => {
+const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
