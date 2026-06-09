@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import Admin, { IAdmin } from '../models/Admin';
+import Member from '../models/Member';
+
 interface AuthRequest extends Request {
   admin?: IAdmin;
 }
@@ -36,6 +38,60 @@ const loginAdmin = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
+  const { email, password } = req.body;
+
+  try {
+    if (!email || !password) {
+      res.status(400).json({ message: 'Please provide email and password' });
+      return;
+    }
+
+    // 1. Check if user is an Admin
+    const admin = await Admin.findOne({ email });
+    if (admin) {
+      if (await admin.matchPassword(password)) {
+        res.json({
+          role: 'admin',
+          _id: admin._id,
+          email: admin.email,
+          token: generateToken(String(admin._id)),
+        });
+        return;
+      } else {
+        res.status(401).json({ message: 'Invalid email or password' });
+        return;
+      }
+    }
+
+    // 2. If not admin, check if user is a Member
+    const member = await Member.findOne({ email });
+    if (member) {
+      if (await member.matchPassword(password)) {
+        res.json({
+          role: 'member',
+          _id: member._id,
+          name: member.name,
+          email: member.email,
+          phone: member.phone,
+          buildingNumber: member.buildingNumber,
+          flatNumber: member.flatNumber,
+          token: generateToken(String(member._id)),
+        });
+        return;
+      } else {
+        res.status(401).json({ message: 'Invalid email or password' });
+        return;
+      }
+    }
+
+    // 3. User not found in either
+    res.status(401).json({ message: 'Invalid email or password' });
+  } catch (error) {
+    res.status(500).json({ message: (error as Error).message });
+  }
+};
+
 const getAdminProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const admin = await Admin.findById(req.admin!._id).select('-password');
@@ -49,4 +105,4 @@ const getAdminProfile = async (req: AuthRequest, res: Response): Promise<void> =
   }
 };
 
-export { loginAdmin, getAdminProfile };
+export { loginAdmin, unifiedLogin, getAdminProfile };
