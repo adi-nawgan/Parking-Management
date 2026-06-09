@@ -76,17 +76,17 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-darkBg flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950">
       {/* Background blobs for premium depth */}
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-brandPurple-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-brandTeal-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brandPurple-500/10 rounded-full blur-3xl animate-pulse-slow z-0"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-brandTeal-500/10 rounded-full blur-3xl animate-pulse-slow z-0"></div>
 
-      <div className={`w-full ${mode === 'register' ? 'max-w-2xl' : 'max-w-md'} glass-card rounded-3xl p-6 shadow-2xl relative z-10 transition-all duration-300`}>
+      <div className={`w-full ${mode === 'register' ? 'max-w-2xl' : 'max-w-md'} glass-card rounded-3xl p-6 shadow-2xl relative z-10 transition-all duration-300 border border-white/5 dark:border-white/5`}>
 
         {/* Header Title */}
         <div className="flex flex-col items-center mb-5">
-          <div className="w-12 h-12 bg-brandPurple-500/10 border border-brandPurple-500/20 rounded-2xl flex items-center justify-center mb-2">
-            <Car className="w-6 h-6 text-brandPurple-500 dark:text-brandPurple-450" />
+          <div className="w-12 h-12 bg-brandPurple-500/15 border border-brandPurple-500/25 rounded-2xl flex items-center justify-center mb-2 shadow-inner">
+            <Car className="w-6 h-6 text-brandPurple-500 dark:text-brandPurple-400" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
             {mode === 'login' ? 'Society Parking Portal' : 'Resident Registration'}
@@ -98,7 +98,7 @@ const Login: React.FC = () => {
 
         {/* Error Alert Box */}
         {error && (
-          <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-450 text-xs text-center">
+          <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-450 text-xs text-center font-medium">
             {error}
           </div>
         )}
@@ -122,7 +122,7 @@ const Login: React.FC = () => {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
+                    placeholder=""
                     className="w-full pl-11 pr-4 py-2.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
                   />
                 </div>
@@ -131,7 +131,7 @@ const Login: React.FC = () => {
               {/* Phone */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                  Phone Number
+                  Phone Number (Username)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
@@ -141,8 +141,8 @@ const Login: React.FC = () => {
                     type="tel"
                     required
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1 (555) 000-0000"
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    placeholder=""
                     className="w-full pl-11 pr-4 py-2.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
                   />
                 </div>
@@ -185,7 +185,7 @@ const Login: React.FC = () => {
                     required
                     value={flatNumber}
                     onChange={(e) => setFlatNumber(e.target.value)}
-                    placeholder="101-A"
+                    placeholder=""
                     className="w-full pl-11 pr-4 py-2.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
                   />
                 </div>
@@ -194,7 +194,7 @@ const Login: React.FC = () => {
               {/* Email */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                  Email Address
+                  Email Address (Optional)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
@@ -202,10 +202,9 @@ const Login: React.FC = () => {
                   </span>
                   <input
                     type="email"
-                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email@example.com"
+                    placeholder=""
                     className="w-full pl-11 pr-4 py-2.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
                   />
                 </div>
@@ -225,7 +224,7 @@ const Login: React.FC = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder=""
                     className="w-full pl-11 pr-11 py-2.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
                   />
                   <button
@@ -240,21 +239,21 @@ const Login: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* Email (Login Mode) */}
+              {/* Email/Phone (Login Mode) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  Email Address
+                  Phone Number or Email Address
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
-                    <Mail className="w-5 h-5" />
+                    <User className="w-5 h-5" />
                   </span>
                   <input
-                    type="email"
+                    type="text"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email@example.com"
+                    placeholder="Email"
                     className="w-full pl-11 pr-4 py-2.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
                   />
                 </div>
@@ -274,13 +273,13 @@ const Login: React.FC = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Password"
                     className="w-full pl-11 pr-11 py-2.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 transition-colors text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-350"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-355"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -292,7 +291,7 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-brandPurple-600 hover:bg-brandPurple-700 disabled:bg-brandPurple-600/50 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-brandPurple-500/20 hover:shadow-brandPurple-600/35 flex justify-center items-center gap-2 text-sm mt-4"
+            className="w-full py-2.5 bg-brandPurple-600 hover:bg-brandPurple-700 disabled:bg-brandPurple-600/50 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-brandPurple-500/20 hover:shadow-brandPurple-600/35 flex justify-center items-center gap-2 text-sm mt-4 relative z-10"
           >
             {loading ? (
               <>
@@ -310,7 +309,7 @@ const Login: React.FC = () => {
         </form>
 
         {/* Mode Toggle Footer */}
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center relative z-10">
           <button
             onClick={toggleMode}
             className="text-xs text-brandPurple-600 dark:text-brandPurple-400 hover:underline font-semibold"

@@ -8,13 +8,13 @@ import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
 import ResidentList from './features/residents/ResidentList';
 import VisitorLogs from './features/visitors/VisitorLogs';
-import LogList from './features/logs/LogList';
 import Settings from './features/settings/Settings';
 import AdminReports from './features/admin/AdminReports';
 
 import MemberDashboard from './features/member/MemberDashboard';
 import ReportForm from './features/member/ReportForm';
 import MyReports from './features/member/MyReports';
+import SearchOwner from './features/member/SearchOwner';
 
 import { ThemeProvider } from './context/ThemeContext';
 import type { UserRole } from './types';
@@ -81,7 +81,6 @@ const AppContent: React.FC = () => {
           <Route index element={<Dashboard />} />
           <Route path="residents" element={<ResidentList />} />
           <Route path="visitors" element={<VisitorLogs />} />
-          <Route path="logs" element={<LogList />} />
           <Route path="settings" element={<Settings />} />
           <Route path="reports" element={<AdminReports />} />
         </Route>
@@ -91,6 +90,7 @@ const AppContent: React.FC = () => {
           <Route index element={<MemberDashboard />} />
           <Route path="report" element={<ReportForm />} />
           <Route path="reports" element={<MyReports />} />
+          <Route path="search" element={<SearchOwner />} />
         </Route>
 
         {/* Catch-all */}

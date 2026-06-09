@@ -35,6 +35,7 @@ const MemberLayout: React.FC = () => {
 
   const menuItems: MenuItem[] = [
     { name: 'Dashboard', path: '/member', icon: LayoutDashboard },
+    { name: 'Search Owner', path: '/member/search', icon: Search },
     { name: 'Report Issue', path: '/member/report', icon: AlertTriangle },
     { name: 'My Reports', path: '/member/reports', icon: ClipboardList },
   ];
