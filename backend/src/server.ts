@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from 'express';
 import http from 'http';
+import path from 'path';
 import { Server as SocketServer } from 'socket.io';
 import cors from 'cors';
 
@@ -18,6 +19,8 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import visitorRoutes from './routes/visitorRoutes';
 import logRoutes from './routes/logRoutes';
 import anprRoutes from './routes/anprRoutes';
+import memberRoutes from './routes/memberRoutes';
+import adminReportRoutes from './routes/adminReportRoutes';
 
 connectDB();
 
@@ -38,6 +41,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/visitors', visitorRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/anpr', anprRoutes);
+app.use('/api/members', memberRoutes);
+app.use('/api/admin/reports', adminReportRoutes);
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.get('/', (req, res) => {
   res.send('SPMS API is running...');
