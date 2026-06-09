@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import API from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 import { AlertTriangle, Upload, Camera, MapPin, Search, X } from 'lucide-react';
 import type { ReportType } from '../../types';
 
-const buildingOptions = [28, 29, 30, 31, 32, 33, 34, 35, 36, 37];
-
 const ReportForm: React.FC = () => {
+  const authCtx = useContext(AuthContext);
+  const memberBuilding = authCtx?.member?.buildingNumber || 28;
+
   const [plate, setPlate] = useState('');
   const [reportType, setReportType] = useState<ReportType>('wrongly_parked');
   const [description, setDescription] = useState('');
-  const [buildingNumber, setBuildingNumber] = useState(28);
   const [locationDesc, setLocationDesc] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -45,7 +46,7 @@ const ReportForm: React.FC = () => {
     if (plate.trim()) formData.append('plate', plate);
     formData.append('reportType', reportType);
     formData.append('description', description);
-    formData.append('location', JSON.stringify({ buildingNumber, description: locationDesc }));
+    formData.append('location', JSON.stringify({ buildingNumber: memberBuilding, description: locationDesc }));
     if (photo) formData.append('photo', photo);
 
     try {
@@ -73,6 +74,7 @@ const ReportForm: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Report Parking Issue</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm">Submit a report about a parking violation for admin review.</p>
@@ -116,26 +118,13 @@ const ReportForm: React.FC = () => {
           </div>
 
           {/* Location */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5" /> Building
-              </label>
-              <select value={buildingNumber} onChange={e => setBuildingNumber(Number(e.target.value))}
-                className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-sm">
-                {buildingOptions.map(n => (
-                  <option key={n} value={n} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                    Building {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Location Detail</label>
-              <input type="text" value={locationDesc} onChange={e => setLocationDesc(e.target.value)}
-                placeholder="e.g. Near entrance, Row 3"
-                className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm" />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5" /> Location Detail
+            </label>
+            <input type="text" value={locationDesc} onChange={e => setLocationDesc(e.target.value)}
+              placeholder="e.g. Near entrance, Row 3"
+              className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-sm" />
           </div>
 
           {/* Description */}
@@ -148,25 +137,53 @@ const ReportForm: React.FC = () => {
 
           {/* Photo */}
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Camera className="w-3.5 h-3.5" /> Photo Evidence (optional, max 5MB)
             </label>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl cursor-pointer hover:border-brandPurple-500/30 transition-colors text-sm text-slate-600 dark:text-slate-400">
-                <Upload className="w-4 h-4" />
-                <span>Upload Photo</span>
-                <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handlePhotoChange} className="hidden" />
-              </label>
-              {photoPreview && (
-                <div className="relative">
-                  <img src={photoPreview} alt="preview" className="h-16 w-16 object-cover rounded-lg border border-slate-200 dark:border-white/10" />
-                  <button type="button" onClick={() => { setPhoto(null); setPhotoPreview(null); }}
-                    className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-0.5 shadow">
-                    <X className="w-3 h-3" />
+            
+            <label className={`
+              border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 cursor-pointer transition-all duration-300 relative overflow-hidden group
+              ${photoPreview 
+                ? 'border-brandTeal-500/50 bg-brandTeal-500/[0.02]' 
+                : 'border-slate-200 dark:border-white/10 bg-slate-100/30 dark:bg-white/[0.02] hover:border-brandPurple-500/35 hover:bg-brandPurple-500/[0.01]'}
+            `}>
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handlePhotoChange} className="hidden" />
+              
+              {photoPreview ? (
+                <div className="flex flex-col items-center gap-3 w-full relative">
+                  <img src={photoPreview} alt="preview" className="h-24 w-36 object-cover rounded-xl border border-brandTeal-500/20 shadow-md transition-transform duration-300 group-hover:scale-105" />
+                  <div className="text-center">
+                    <p className="text-xs font-bold text-brandTeal-500 flex items-center justify-center gap-1.5">
+                      ✓ Image Loaded
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Click to replace photo</p>
+                  </div>
+                  
+                  <button 
+                    type="button" 
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      e.stopPropagation();
+                      setPhoto(null); 
+                      setPhotoPreview(null); 
+                    }}
+                    className="absolute top-0 right-2 sm:right-6 p-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full shadow-lg transition-transform hover:scale-110 active:scale-95"
+                  >
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-center text-slate-500 dark:text-slate-400">
+                  <div className="p-3 bg-brandPurple-500/10 dark:bg-brandPurple-500/10 rounded-2xl text-brandPurple-600 dark:text-brandPurple-400 group-hover:scale-110 transition-transform duration-300">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Upload parking photo</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-0.5">Drag and drop or click to browse</p>
+                  </div>
+                </div>
               )}
-            </div>
+            </label>
           </div>
 
           <button type="submit" disabled={loading}

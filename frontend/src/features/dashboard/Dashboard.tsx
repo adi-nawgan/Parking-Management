@@ -2,28 +2,23 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import io, { Socket } from 'socket.io-client';
 import API from '../../services/api';
 import { ThemeContext } from '../../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Car,
-  Search,
-  Plus,
   AlertTriangle,
   CheckCircle2,
   Clock,
-  X,
-  UserCheck,
-  Sun,
-  Moon
+  Plus,
+  LogOut,
+  TrendingUp,
+  ShieldAlert,
 } from 'lucide-react';
-import type { ParkedVehicle, PlateSearchMatch, DashboardSummary } from '../../types';
+import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
+import { toast } from 'react-hot-toast';
+import type { ParkedVehicle, DashboardSummary } from '../../types';
 
 type ParkingState = 'normal' | 'overflow' | 'full';
-
-interface VisitorFormDetails {
-  name: string;
-  buildingVisited: number;
-  flatVisited: string;
-  purpose: string;
-}
 
 interface StateConfig {
   barColor: string;
@@ -36,8 +31,9 @@ interface StateConfig {
 
 const Dashboard: React.FC = () => {
   const themeCtx = useContext(ThemeContext);
+  const navigate = useNavigate();
   if (!themeCtx) throw new Error('Dashboard must be inside ThemeProvider');
-  const { theme, toggleTheme } = themeCtx;
+  const { theme } = themeCtx;
 
   // Stats states
   const [capacity, setCapacity] = useState<number>(60);
@@ -48,25 +44,8 @@ const Dashboard: React.FC = () => {
   const [state, setState] = useState<ParkingState>('normal');
   const [parkedList, setParkedList] = useState<ParkedVehicle[]>([]);
 
-  // Modals & forms
-  const [showEntryModal, setShowEntryModal] = useState<boolean>(false);
-  const [plateQuery, setPlateQuery] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<PlateSearchMatch[]>([]);
-
-  // Entry Form values
-  const [entryPlate, setEntryPlate] = useState<string>('');
-  const [entryType, setEntryType] = useState<'resident' | 'tenant' | 'visitor'>('visitor');
-  const [entryBuilding, setEntryBuilding] = useState<number>(28);
-  const [entryFlat, setEntryFlat] = useState<string>('');
-  const [residentId, setResidentId] = useState<string | null>(null);
-  const [visitorDetails, setVisitorDetails] = useState<VisitorFormDetails>({ name: '', buildingVisited: 28, flatVisited: '', purpose: '' });
-  const [formError, setFormError] = useState<string>('');
-
   const socketRef = useRef<Socket | null>(null);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
-
-  // Suppress unused warning — plateQuery drives the search via handlePlateSearch
-  void plateQuery;
 
   // Periodically refresh elapsed times
   useEffect(() => {
@@ -100,10 +79,11 @@ const Dashboard: React.FC = () => {
     socketRef.current.on('capacityUpdate', (data: Partial<DashboardSummary>) => {
       if (data.currentlyParkedCount !== undefined) setParkedCount(data.currentlyParkedCount);
       if (data.availableSpots !== undefined) setAvailable(data.availableSpots);
-      if (data.state !== undefined) setState(data.state);
+      if (data.state !== undefined) setState(data.state as ParkingState);
     });
 
     socketRef.current.on('vehicleEntry', (entry: ParkedVehicle) => {
+      toast.success(`Vehicle ${entry.plate} entered flat ${entry.flatNumber}`);
       setParkedList((prev) => {
         if (prev.find(p => p._id === entry._id)) return prev;
         return [entry, ...prev];
@@ -111,6 +91,7 @@ const Dashboard: React.FC = () => {
     });
 
     socketRef.current.on('vehicleExit', (exitLog: { plate: string }) => {
+      toast.error(`Vehicle ${exitLog.plate} logged out`);
       setParkedList((prev) => prev.filter(p => p.plate !== exitLog.plate));
     });
 
@@ -119,88 +100,16 @@ const Dashboard: React.FC = () => {
         socketRef.current.disconnect();
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handlePlateSearch = async (val: string): Promise<void> => {
-    setEntryPlate(val);
-    setPlateQuery(val);
-    if (!val || val.trim() === '') {
-      setSearchResults([]);
-      setEntryType('visitor');
-      setResidentId(null);
-      return;
-    }
-
-    try {
-      const { data } = await API.get<PlateSearchMatch[]>(`/dashboard/search-plate?plate=${val}`);
-      setSearchResults(data);
-
-      if (data.length === 1 && data[0].vehicle.plate === val.toUpperCase()) {
-        selectResidentVehicle(data[0]);
-      }
-    } catch (err) {
-      console.error('Error during auto-complete search:', err);
-    }
-  };
-
-  const selectResidentVehicle = (match: PlateSearchMatch): void => {
-    setEntryPlate(match.vehicle.plate);
-    setEntryType(match.type);
-    setEntryFlat(match.flatNumber);
-    setEntryBuilding(match.buildingNumber || 28);
-    setResidentId(match.residentId);
-    setSearchResults([]);
-  };
-
-  const submitVehicleEntry = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    setFormError('');
-
-    if (!entryPlate) {
-      setFormError('Plate number is required');
-      return;
-    }
-
-    if (entryType === 'visitor' && (!visitorDetails.name || !visitorDetails.flatVisited)) {
-      setFormError('Visitor name and destination flat are required');
-      return;
-    }
-
-    const payload = {
-      plate: entryPlate,
-      type: entryType,
-      flatNumber: entryType === 'visitor' ? visitorDetails.flatVisited : entryFlat,
-      buildingNumber: Number(entryType === 'visitor' ? visitorDetails.buildingVisited : entryBuilding),
-      residentId,
-      visitorDetails: entryType === 'visitor' ? {
-        name: visitorDetails.name,
-        flatVisited: visitorDetails.flatVisited,
-        purpose: visitorDetails.purpose
-      } : null
-    };
-
-    try {
-      await API.post('/dashboard/entry', payload);
-      setEntryPlate('');
-      setEntryFlat('');
-      setEntryBuilding(28);
-      setResidentId(null);
-      setVisitorDetails({ name: '', buildingVisited: 28, flatVisited: '', purpose: '' });
-      setEntryType('visitor');
-      setShowEntryModal(false);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setFormError(e.response?.data?.message || 'Error processing entry');
-    }
-  };
 
   const submitVehicleExit = async (plate: string): Promise<void> => {
     try {
       await API.post('/dashboard/exit', { plate });
+      toast.success(`Exit registered for ${plate}`);
+      fetchSummary();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Failed to log exit');
+      toast.error(e.response?.data?.message || 'Failed to log exit');
     }
   };
 
@@ -226,172 +135,205 @@ const Dashboard: React.FC = () => {
 
   const stateConfig: Record<ParkingState, StateConfig> = {
     normal: {
-      barColor: 'bg-brandTeal-500',
-      bgColor: 'bg-brandTeal-500/10',
-      borderColor: 'border-brandTeal-500/20 dark:border-brandTeal-500/30',
-      textColor: 'text-brandTeal-600 dark:text-brandTeal-400',
+      barColor: 'text-emerald-500',
+      bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/5',
+      borderColor: 'border-emerald-500/30 dark:border-emerald-500/10',
+      textColor: 'text-emerald-600 dark:text-emerald-400',
       label: 'Normal Capacity',
       icon: CheckCircle2
     },
     overflow: {
-      barColor: 'bg-amber-500',
-      bgColor: 'bg-amber-500/10',
-      borderColor: 'border-amber-500/35',
+      barColor: 'text-amber-500',
+      bgColor: 'bg-amber-500/10 dark:bg-amber-500/5',
+      borderColor: 'border-amber-500/30 dark:border-amber-500/10',
       textColor: 'text-amber-600 dark:text-amber-400',
       label: 'Overflow Warning',
       icon: AlertTriangle
     },
     full: {
-      barColor: 'bg-rose-600 animate-pulse',
-      bgColor: 'bg-rose-500/15 glow-red-pulse',
-      borderColor: 'border-rose-600',
-      textColor: 'text-rose-600 dark:text-rose-400',
+      barColor: 'text-rose-500',
+      bgColor: 'bg-rose-500/10 dark:bg-rose-500/5',
+      borderColor: 'border-rose-500/30 dark:border-rose-500/10',
+      textColor: 'text-rose-600 dark:text-rose-450',
       label: 'PARKING FULL',
-      icon: AlertTriangle
+      icon: ShieldAlert
     }
   };
 
   const currentSettings = stateConfig[state] ?? stateConfig.normal;
   const BarIcon = currentSettings.icon;
 
-  const fillPercentage = Math.min(100, Math.round((parkedCount / overflowLimit) * 100));
+  // Percentage of standard capacity (can go > 100% in overflow)
+  const occupancyPercentage = Math.round((parkedCount / capacity) * 100);
 
   return (
-    <div className="space-y-8">
-
-      {/* Alert Header for Overflow states */}
+    <div className="space-y-8 relative">
+      
+      {/* Alert Header for Overflow/Full states */}
       {state !== 'normal' && (
-        <div className={`p-4 rounded-2xl border ${currentSettings.borderColor} ${currentSettings.bgColor} flex items-center justify-between gap-4 animate-bounce`}>
+        <div className={`p-4 rounded-2xl border ${currentSettings.borderColor} ${currentSettings.bgColor} flex items-center justify-between gap-4 animate-pulse relative z-10 shadow-sm`}>
           <div className="flex items-center gap-3">
-            <BarIcon className={`w-6 h-6 ${currentSettings.textColor}`} />
+            <div className={`p-2 rounded-xl bg-white dark:bg-slate-900 border ${currentSettings.borderColor} shadow-inner`}>
+              <BarIcon className={`w-5 h-5 ${currentSettings.textColor}`} />
+            </div>
             <div>
-              <p className={`font-bold ${currentSettings.textColor} text-base`}>
-                {currentSettings.label} Status Triggered
+              <p className={`font-bold ${currentSettings.textColor} text-sm`}>
+                {currentSettings.label} Triggered
               </p>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {state === 'full'
-                  ? 'The parking has reached critical overflow capacity limit. Enforce exit procedures and restrict new entry.'
-                  : 'Vehicles parked exceed standard marked spots. Overflow mode is active.'}
+                  ? 'The parking has reached critical capacity. Please enforce exit logging and restrict external visitors.'
+                  : 'Currently parked vehicles exceed standard capacity. Overflow monitoring is active.'}
               </p>
             </div>
           </div>
-          <span className={`text-2xl font-black ${currentSettings.textColor}`}>{parkedCount} / {overflowLimit}</span>
+          <span className={`text-2xl font-black font-mono ${currentSettings.textColor}`}>{parkedCount} / {overflowLimit}</span>
         </div>
       )}
 
       {/* Hero Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Parking Dashboard</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Real-time surveillance console for residential parking spaces.</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Surveillance Center</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Real-time occupancy tracking and active log surveillance.</p>
         </div>
-        <div className="flex items-center gap-3">
+        
+        {/* Quick Actions */}
+        <div className="flex gap-2">
           <button
-            onClick={toggleTheme}
-            className="w-12 h-12 rounded-xl bg-brandPurple-50 dark:bg-brandPurple-500/10 border border-brandPurple-200 dark:border-brandPurple-500/30 flex items-center justify-center text-brandPurple-600 dark:text-amber-400 shadow-sm transition-all duration-200"
-            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            onClick={() => navigate('/entry')}
+            className="btn-scale px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-1.5 text-xs shadow-md shadow-emerald-500/10"
           >
-            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400 animate-pulse-slow" /> : <Moon className="w-5 h-5 text-brandPurple-600" />}
+            <Plus className="w-4 h-4" /> Log Entry
           </button>
-
           <button
-            onClick={() => setShowEntryModal(true)}
-            className="px-5 py-3 bg-brandPurple-600 hover:bg-brandPurple-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg shadow-brandPurple-500/15"
+            onClick={() => navigate('/exit')}
+            className="btn-scale px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl flex items-center gap-1.5 text-xs shadow-md shadow-rose-500/10"
           >
-            <Plus className="w-5 h-5" /> Log Vehicle Entry
+            <LogOut className="w-4 h-4" /> Log Exit
           </button>
         </div>
       </div>
 
-      {/* KPI Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Circular Progress Speedometer Widget */}
+      <div className="premium-card p-8 flex flex-col items-center justify-center relative z-10 shadow-sm overflow-hidden">
+        {/* Speedometer Glow circles */}
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none"></div>
+        
+        <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6">
+          Capacity Speedometer
+        </h3>
 
-        <div className="glass-card rounded-2xl p-6 border border-slate-200 dark:border-white/5 flex flex-col justify-between">
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Stalls Capacity</p>
-          <div className="flex items-baseline justify-between mt-4">
-            <span className="text-4xl font-extrabold text-slate-900 dark:text-white">{capacity}</span>
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold">Max Limit: {overflowLimit}</span>
-          </div>
+        {/* Dynamic speedometer Progress bar */}
+        <div className={`w-56 h-56 transition-all duration-300 ${
+          state === 'full' ? 'glow-ring-red' : state === 'overflow' ? 'glow-ring-amber' : 'glow-ring-green'
+        }`}>
+          <CircularProgressbar
+            value={parkedCount}
+            maxValue={capacity}
+            text={`${parkedCount} / ${capacity}`}
+            styles={buildStyles({
+              pathColor: state === 'full' ? '#EF4444' : state === 'overflow' ? '#F59E0B' : '#22C55E',
+              textColor: theme === 'dark' ? '#F8FAFC' : '#0F172A',
+              trailColor: theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)',
+              textSize: '14px',
+            })}
+          />
         </div>
 
-        <div className={`glass-card rounded-2xl p-6 border ${state === 'full' ? 'border-rose-500/50 glow-red-pulse' : 'border-slate-200 dark:border-white/5'} flex flex-col justify-between`}>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Currently Inside</p>
-          <div className="flex items-baseline justify-between mt-4">
-            <span className="text-4xl font-extrabold text-slate-900 dark:text-white">{parkedCount}</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Occupancy: {Math.round((parkedCount / capacity) * 100)}%</span>
-          </div>
+        <div className="mt-5 text-center">
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            {occupancyPercentage}% Occupied
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">
+            Status: <span className={`font-bold uppercase ${currentSettings.textColor}`}>{state}</span>
+          </p>
         </div>
-
-        <div className="glass-card rounded-2xl p-6 border border-slate-200 dark:border-white/5 flex flex-col justify-between">
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Available Slots</p>
-          <div className="flex items-baseline justify-between mt-4">
-            <span className={`text-4xl font-extrabold ${available === 0 ? 'text-rose-600 dark:text-rose-400' : 'text-brandTeal-600 dark:text-brandTeal-400'}`}>{available}</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">First come, first served</span>
-          </div>
-        </div>
-
       </div>
 
-      {/* Large Visual Progress Bar */}
-      <div className="glass-card rounded-2xl p-6 border border-slate-200 dark:border-white/5 space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Car className={`w-5 h-5 ${currentSettings.textColor}`} />
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Live Capacity Monitor Bar</span>
+      {/* KPI Stats Scoreboard */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+        
+        {/* Total Capacity card */}
+        <div className="premium-card p-6 flex items-center justify-between border-slate-200 hover:border-blue-500/20">
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Stalls</p>
+            <p className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">{capacity}</p>
           </div>
-          <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{parkedCount} occupied / {capacity} marked spots</span>
+          <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+            <TrendingUp className="w-6 h-6" />
+          </div>
         </div>
 
-        <div className="w-full bg-slate-100 dark:bg-white/5 rounded-full h-4 overflow-hidden border border-slate-200 dark:border-white/5">
-          <div
-            className={`h-full transition-all duration-500 ease-out ${currentSettings.barColor}`}
-            style={{ width: `${fillPercentage}%` }}
-          ></div>
+        {/* Parked count card */}
+        <div className={`premium-card p-6 flex items-center justify-between ${
+          state === 'full' ? 'border-rose-500/35 shadow-[0_0_15px_rgba(239,68,68,0.08)]' : 'border-slate-200'
+        }`}>
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Currently Inside</p>
+            <p className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">{parkedCount}</p>
+          </div>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            state === 'full' ? 'bg-rose-500/10 text-rose-500' : state === 'overflow' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
+          }`}>
+            <Car className="w-6 h-6" />
+          </div>
         </div>
 
-        <div className="flex justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400 px-1 pt-1">
-          <span className="text-brandTeal-600 dark:text-brandTeal-400 flex items-center gap-1">🟢 Normal (Under {capacity})</span>
-          <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">🟡 Overflow ({capacity} to {overflowLimit - 1})</span>
-          <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">🔴 Full ({overflowLimit}+)</span>
+        {/* Available spots card */}
+        <div className="premium-card p-6 flex items-center justify-between border-slate-200 hover:border-emerald-500/20">
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Available Spots</p>
+            <p className={`text-3xl font-extrabold font-mono tracking-tight ${available <= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+              {available}
+            </p>
+          </div>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            available <= 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'
+          }`}>
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
         </div>
+
       </div>
 
       {/* Live List of Occupied Vehicles */}
-      <div className="glass-card rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden">
-
-        <div className="p-6 border-b border-slate-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="premium-card overflow-hidden relative z-10 shadow-sm">
+        
+        {/* Table Header */}
+        <div className="p-6 border-b border-slate-200 dark:border-white/[0.08] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50 dark:bg-white/[0.01]">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Currently Parked Vehicles</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Live list of active vehicles parked inside the premises.</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Active Vehicles Onsite</h2>
+            <p className="text-slate-400 dark:text-slate-500 text-xs mt-0.5">Real-time tracking grid of cars parked in building slots.</p>
           </div>
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl px-3.5 py-2 w-full md:w-auto">
-            <Clock className="w-4 h-4 text-brandPurple-600 dark:text-brandPurple-400" />
-            <span className="text-xs text-slate-700 dark:text-slate-200 font-medium">{currentTime.toLocaleTimeString()}</span>
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-white/5 rounded-xl px-3.5 py-1.5">
+            <Clock className="w-3.5 h-3.5 text-blue-500" />
+            <span className="text-xs text-slate-700 dark:text-slate-200 font-semibold font-mono">{currentTime.toLocaleTimeString()}</span>
           </div>
         </div>
 
         {parkedList.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 text-sm space-y-2">
-            <Car className="w-12 h-12 text-slate-600 mx-auto" />
-            <p className="font-semibold text-slate-500 dark:text-slate-400">No Vehicles Parked</p>
-            <p className="text-xs text-slate-500">Log an entry using the button above to begin tracking.</p>
+          <div className="p-12 text-center text-slate-450 dark:text-slate-500 space-y-2">
+            <Car className="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" />
+            <p className="font-bold text-slate-700 dark:text-slate-350">No Vehicles Parked</p>
+            <p className="text-xs text-slate-500">Log a new vehicle entry to start active surveillance tracking.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-white/5 bg-slate-100/30 dark:bg-white/[0.01] text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-200 dark:border-white/[0.08] bg-slate-100/30 dark:bg-white/[0.01] text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   <th className="py-4 px-6">Plate Number</th>
-                  <th className="py-4 px-6">Classification</th>
-                  <th className="py-4 px-6">Flat Destination</th>
-                  <th className="py-4 px-6">Name / Details</th>
-                  <th className="py-4 px-6">Entry Timestamp</th>
-                  <th className="py-4 px-6">Duration Parked</th>
-                  <th className="py-4 px-6 text-center">Action</th>
+                  <th className="py-4 px-6">Tag / Type</th>
+                  <th className="py-4 px-6">Destination</th>
+                  <th className="py-4 px-6">Occupant Info</th>
+                  <th className="py-4 px-6">Entry Time</th>
+                  <th className="py-4 px-6">Duration</th>
+                  <th className="py-4 px-6 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-white/5 text-sm text-slate-700 dark:text-slate-200">
-                {parkedList.map((veh) => {
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05] text-sm text-slate-700 dark:text-slate-200">
+                {parkedList.map((veh, idx) => {
                   const overstay = isOverstaying(veh.entryTime);
                   const isVisitor = veh.type === 'visitor';
 
@@ -399,52 +341,69 @@ const Dashboard: React.FC = () => {
                     <tr
                       key={veh._id}
                       className={`
-                        transition-colors hover:bg-slate-100/30 dark:hover:bg-white/[0.02]
-                        ${overstay ? 'bg-amber-500/5 dark:bg-amber-500/5 hover:bg-amber-500/10' : ''}
+                        transition-colors hover:bg-slate-50/80 dark:hover:bg-white/[0.02]
+                        ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30 dark:bg-white/[0.01]'}
+                        ${overstay ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.03] hover:bg-amber-500/[0.05]' : ''}
                       `}
                     >
-                      <td className="py-4 px-6 font-mono font-bold tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <span className="px-2.5 py-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md">
+                      {/* Plate */}
+                      <td className="py-4 px-6 font-mono font-bold tracking-wider text-slate-900 dark:text-slate-100">
+                        <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 rounded-lg shadow-sm">
                           {veh.plate}
                         </span>
                         {overstay && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 uppercase animate-pulse flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> Overstay
+                          <span className="ml-2 px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 uppercase inline-flex items-center gap-1 animate-pulse">
+                            <Clock className="w-2.5 h-2.5" /> Overstay
                           </span>
                         )}
                       </td>
+                      
+                      {/* Type Badge */}
                       <td className="py-4 px-6">
                         <span className={`
-                          px-2.5 py-1 rounded-full text-xs font-bold uppercase border
-                          ${veh.type === 'resident' ? 'bg-brandPurple-50 dark:bg-brandPurple-500/10 text-brandPurple-700 dark:text-brandPurple-400 border border-brandPurple-200 dark:border-brandPurple-500/20' : ''}
-                          ${veh.type === 'tenant' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20' : ''}
-                          ${veh.type === 'visitor' ? 'bg-brandTeal-50 dark:bg-brandTeal-500/10 text-brandTeal-700 dark:text-brandTeal-400 border border-brandTeal-200 dark:border-brandTeal-500/20' : ''}
+                          px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border
+                          ${veh.type === 'resident' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20' : ''}
+                          ${veh.type === 'tenant' ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200/50 dark:border-purple-500/20' : ''}
+                          ${veh.type === 'visitor' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-500/20' : ''}
                         `}>
                           {veh.type}
                         </span>
                       </td>
-                      <td className="py-4 px-6 font-semibold">Bldg {veh.buildingNumber} • Flat {veh.flatNumber}</td>
-                      <td className="py-4 px-6 text-slate-600 dark:text-slate-300">
+
+                      {/* Destination */}
+                      <td className="py-4 px-6 font-semibold text-slate-800 dark:text-slate-200">
+                        Bldg {veh.buildingNumber} • Flat {veh.flatNumber}
+                      </td>
+
+                      {/* Occupant Detail */}
+                      <td className="py-4 px-6 text-slate-500 dark:text-slate-400">
                         {isVisitor
                           ? <div>
-                              <p className="font-semibold text-slate-800 dark:text-slate-200">{veh.visitorDetails?.name}</p>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400">{veh.visitorDetails?.purpose}</p>
+                              <p className="font-bold text-slate-700 dark:text-slate-200">{veh.visitorDetails?.name}</p>
+                              <p className="text-[10px] text-slate-500">{veh.visitorDetails?.purpose}</p>
                             </div>
-                          : <span>{veh.residentId?.ownerName || 'Resident Owner'}</span>
+                          : <p className="font-bold text-slate-700 dark:text-slate-200">{veh.residentId?.ownerName || 'Resident Occupant'}</p>
                         }
                       </td>
+
+                      {/* Timestamp */}
                       <td className="py-4 px-6 text-slate-500 dark:text-slate-400 text-xs">
                         {new Date(veh.entryTime).toLocaleString()}
                       </td>
-                      <td className="py-4 px-6 font-medium text-slate-600 dark:text-slate-300">
+
+                      {/* Elapsed Duration */}
+                      <td className="py-4 px-6 font-semibold text-slate-700 dark:text-slate-350">
                         {getElapsedTime(veh.entryTime)}
                       </td>
+
+                      {/* Actions */}
                       <td className="py-4 px-6 text-center">
                         <button
                           onClick={() => submitVehicleExit(veh.plate)}
-                          className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg text-xs font-semibold border border-rose-500/25 hover:border-transparent transition-all duration-200"
+                          className="btn-scale px-3 py-1.5 bg-rose-500/10 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl text-xs font-bold border border-rose-500/20 hover:border-transparent transition-all duration-200 flex items-center justify-center mx-auto gap-1"
                         >
-                          Log Exit
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Log Exit</span>
                         </button>
                       </td>
                     </tr>
@@ -455,199 +414,6 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Vehicle Entry Modal */}
-      {showEntryModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg glass-card rounded-3xl p-6 border border-slate-200/50 dark:border-white/10 shadow-2xl relative animate-fadeIn">
-            <button
-              onClick={() => {
-                setShowEntryModal(false);
-                setFormError('');
-                setSearchResults([]);
-              }}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 dark:hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Log Vehicle Entry</h3>
-
-            {formError && (
-              <div className="mb-4 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs rounded-xl text-center font-medium">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={submitVehicleEntry} className="space-y-4">
-
-              {/* Plate search */}
-              <div className="relative">
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  Plate Number
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
-                    <Search className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    required
-                    value={entryPlate}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePlateSearch(e.target.value)}
-                    placeholder="Enter Plate Number"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 uppercase tracking-widest text-sm"
-                  />
-                </div>
-
-                {/* Auto complete dropdown */}
-                {searchResults.length > 0 && (
-                  <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden z-50 divide-y divide-slate-100 dark:divide-slate-700 max-h-48 overflow-y-auto">
-                    {searchResults.map((match) => (
-                      <button
-                        type="button"
-                        key={match.vehicle.plate}
-                        onClick={() => selectResidentVehicle(match)}
-                        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/65 text-left text-xs transition-colors"
-                      >
-                        <div>
-                          <p className="font-mono font-extrabold tracking-wider text-slate-900 dark:text-slate-100">{match.vehicle.plate}</p>
-                          <p className="text-slate-500 dark:text-slate-400">Bldg {match.buildingNumber} • Flat {match.flatNumber} • {match.ownerName} ({match.type})</p>
-                        </div>
-                        <span className="text-[10px] font-bold text-brandPurple-600 dark:text-brandPurple-400 bg-brandPurple-500/10 dark:bg-brandPurple-500/15 px-2 py-0.5 rounded border border-brandPurple-500/20 flex items-center gap-1">
-                          <UserCheck className="w-3 h-3" /> Select
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Classification Type */}
-              <div>
-                <span className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  Vehicle Type Classification
-                </span>
-                <div className="flex gap-2">
-                  {(['resident', 'tenant', 'visitor'] as const).map(t => (
-                    <button
-                      type="button"
-                      key={t}
-                      onClick={() => {
-                        setEntryType(t);
-                        if (t === 'visitor') {
-                          setResidentId(null);
-                          setEntryFlat('');
-                        }
-                      }}
-                      className={`
-                        flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase transition-all duration-200 border
-                        ${entryType === t
-                          ? 'bg-brandPurple-600 border-brandPurple-600 text-white font-black'
-                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}
-                      `}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Resident Info */}
-              {entryType !== 'visitor' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 animate-fadeIn">
-                  <div>
-                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Building</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={entryBuilding ? `Bldg ${entryBuilding}` : ''}
-                      className="w-full px-3 py-2 bg-slate-200/50 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-lg text-slate-600 dark:text-slate-300 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Flat Number</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={entryFlat}
-                      className="w-full px-3 py-2 bg-slate-200/50 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-lg text-slate-600 dark:text-slate-300 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1 font-semibold text-brandPurple-600 dark:text-brandPurple-400">Status Check</label>
-                    <div className="w-full px-3 py-2 bg-brandPurple-500/10 border border-brandPurple-500/25 rounded-lg text-brandPurple-600 dark:text-brandPurple-400 font-bold text-[11px] uppercase text-center flex items-center justify-center">
-                      ✓ Resident
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Visitor Info */
-                <div className="space-y-3 p-4 rounded-2xl bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 animate-fadeIn">
-                  <span className="block text-xs font-bold text-slate-800 dark:text-slate-300 border-b border-slate-200 dark:border-white/5 pb-1 mb-2">
-                    Visitor Entry Information
-                  </span>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="col-span-1 sm:col-span-3">
-                      <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Visitor Full Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={visitorDetails.name}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVisitorDetails({ ...visitorDetails, name: e.target.value })}
-                        placeholder="Enter Visitor Name"
-                        className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
-                      />
-                    </div>
-                    <div className="col-span-1 sm:col-span-2">
-                      <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Visiting Building</label>
-                      <select
-                        value={visitorDetails.buildingVisited}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVisitorDetails({ ...visitorDetails, buildingVisited: Number(e.target.value) })}
-                        className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
-                      >
-                        {[28, 29, 30, 31, 32, 33, 34, 35, 36, 37].map(num => (
-                          <option key={num} value={num} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Building {num}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-span-1">
-                      <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">Visiting Flat</label>
-                      <input
-                        type="text"
-                        required
-                        value={visitorDetails.flatVisited}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVisitorDetails({ ...visitorDetails, flatVisited: e.target.value })}
-                        placeholder="Flat"
-                        className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1 font-semibold">Purpose of Visit</label>
-                    <input
-                      type="text"
-                      value={visitorDetails.purpose}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVisitorDetails({ ...visitorDetails, purpose: e.target.value })}
-                      placeholder="Enter Purpose of Visit"
-                      className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-brandPurple-600 hover:bg-brandPurple-700 text-white font-bold rounded-xl transition-all duration-200 flex justify-center items-center gap-2 text-sm mt-6"
-              >
-                Log Entry
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
     </div>
   );

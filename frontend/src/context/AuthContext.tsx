@@ -105,7 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const unifiedLogin = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
+  const unifiedLogin = async (email: string, password: string): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
     try {
       const { data } = await API.post<{
         role: UserRole;

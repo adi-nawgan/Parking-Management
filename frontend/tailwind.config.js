@@ -8,21 +8,27 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        darkBg: '#090816',      // deep midnight purple
-        darkCard: '#131126',    // deep amethyst card
-        darkBorder: '#232048',  // dark amethyst border
+        darkBg: '#0F172A',      // deep navy dark
+        darkCard: '#1E293B',    // dark slate card
+        darkBorder: '#334155',  // border color
+        accentBlue: '#3B82F6',
+        accentGreen: '#22C55E',
+        accentAmber: '#F59E0B',
+        accentRed: '#EF4444',
+        textPrimary: '#F8FAFC',
+        textSecondary: '#94A3B8',
         brandPurple: {
           50: '#f5f3ff',
           100: '#ede9fe',
           200: '#ddd6fe',
           300: '#c4b5fd',
           400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          500: '#3B82F6', // Aligning brand purple with electric blue accent for primary actions
+          600: '#2563EB',
+          700: '#1D4ED8',
+          800: '#1E40AF',
+          900: '#1E3A8A',
+          950: '#172554',
         },
         brandTeal: {
           50: '#f0fdfa',
@@ -30,12 +36,12 @@ module.exports = {
           200: '#99f6e4',
           300: '#5eead4',
           400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-          950: '#042f2e',
+          500: '#22C55E', // Aligning brand teal with success green
+          600: '#16A34A',
+          700: '#15803D',
+          800: '#166534',
+          900: '#14532D',
+          950: '#052e16',
         }
       },
       fontFamily: {
