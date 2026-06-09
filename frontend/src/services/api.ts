@@ -7,10 +7,9 @@ const API = axios.create({
   },
 });
 
-// Request Interceptor to add Authorization Token
 API.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('spms_token');
+    const token = localStorage.getItem('spms_token') || localStorage.getItem('member_spms_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -21,7 +20,6 @@ API.interceptors.request.use(
   }
 );
 
-// Response Interceptor to handle unauthorized access
 API.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: { response?: { status: number } }) => {
@@ -29,7 +27,8 @@ API.interceptors.response.use(
       console.warn('Unauthorized access detected. Logging out...');
       localStorage.removeItem('spms_token');
       localStorage.removeItem('spms_admin');
-      // Dispatch an event to notify AuthContext
+      localStorage.removeItem('member_spms_token');
+      localStorage.removeItem('member_spms_data');
       window.dispatchEvent(new Event('auth_session_expired'));
     }
     return Promise.reject(error);

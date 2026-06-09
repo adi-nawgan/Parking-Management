@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   Sun,
   Moon,
+  AlertTriangle,
   LucideIcon
 } from 'lucide-react';
 
@@ -40,6 +41,7 @@ const Layout: React.FC = () => {
     { name: 'Visitor Logs', path: '/visitors', icon: ClipboardList },
     { name: 'Complete Logs', path: '/logs', icon: FileClock },
     { name: 'System Settings', path: '/settings', icon: Settings },
+    { name: 'Parking Reports', path: '/reports', icon: AlertTriangle },
   ];
 
   const toggleMobile = (): void => setMobileOpen(!mobileOpen);
