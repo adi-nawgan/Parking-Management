@@ -116,6 +116,7 @@ export interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   memberLogin: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  unifiedLogin: (email: string, password: string) => Promise<{ success: boolean; role?: UserRole; message?: string }>;
   memberRegister: (data: { name: string; email: string; password: string; phone: string; buildingNumber: number; flatNumber: string }) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 }

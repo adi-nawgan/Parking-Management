@@ -123,7 +123,11 @@ const ReportForm: React.FC = () => {
               </label>
               <select value={buildingNumber} onChange={e => setBuildingNumber(Number(e.target.value))}
                 className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-sm">
-                {buildingOptions.map(n => <option key={n} value={n}>Building {n}</option>)}
+                {buildingOptions.map(n => (
+                  <option key={n} value={n} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                    Building {n}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

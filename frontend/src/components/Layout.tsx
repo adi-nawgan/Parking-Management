@@ -134,10 +134,17 @@ const Layout: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="flex gap-2">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center p-3 text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-white/5 rounded-xl transition-all duration-200"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400 animate-pulse-slow" /> : <Moon className="w-5 h-5 text-slate-400" />}
+            </button>
             <button
               onClick={logout}
-              className="flex items-center gap-3.5 w-full px-4 py-3 text-slate-400 hover:text-rose-450 hover:bg-rose-500/10 border border-white/5 hover:border-rose-500/25 rounded-xl text-sm font-medium transition-all duration-200"
+              className="flex items-center justify-center gap-3.5 flex-1 px-4 py-3 text-slate-400 hover:text-rose-450 hover:bg-rose-500/10 border border-white/5 hover:border-rose-500/25 rounded-xl text-sm font-medium transition-all duration-200"
             >
               <LogOut className="w-5 h-5" />
               Logout

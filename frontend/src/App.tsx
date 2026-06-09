@@ -12,9 +12,7 @@ import LogList from './features/logs/LogList';
 import Settings from './features/settings/Settings';
 import AdminReports from './features/admin/AdminReports';
 
-import MemberLogin from './features/member/MemberLogin';
 import MemberDashboard from './features/member/MemberDashboard';
-import SearchPlate from './features/member/SearchPlate';
 import ReportForm from './features/member/ReportForm';
 import MyReports from './features/member/MyReports';
 
@@ -48,7 +46,7 @@ const RoleRoute: React.FC<RoleRouteProps> = ({ children, role, fallback }) => {
     return <div className="min-h-screen bg-darkBg text-slate-400 flex items-center justify-center">Loading security session...</div>;
   }
   if (!authCtx.token) {
-    return <Navigate to={role === 'member' ? '/member/login' : '/login'} replace />;
+    return <Navigate to="/login" replace />;
   }
   if (authCtx.role !== role) {
     return <Navigate to={fallback || '/'} replace />;
@@ -75,11 +73,8 @@ const AppContent: React.FC = () => {
     <Router>
       <Routes>
 
-        {/* Admin Login */}
+        {/* Login Page (Unified) */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-
-        {/* Member Login / Register */}
-        <Route path="/member/login" element={<PublicRoute><MemberLogin /></PublicRoute>} />
 
         {/* Admin Routes */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -94,7 +89,6 @@ const AppContent: React.FC = () => {
         {/* Member Routes */}
         <Route path="/member" element={<RoleRoute role="member"><MemberLayout /></RoleRoute>}>
           <Route index element={<MemberDashboard />} />
-          <Route path="search-plate" element={<SearchPlate />} />
           <Route path="report" element={<ReportForm />} />
           <Route path="reports" element={<MyReports />} />
         </Route>

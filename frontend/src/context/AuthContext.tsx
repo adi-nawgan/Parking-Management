@@ -105,8 +105,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const unifiedLogin = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const { data } = await API.post<{
+        role: UserRole;
+        token: string;
+        _id: string;
+        email: string;
+        name?: string;
+        phone?: string;
+        buildingNumber?: number;
+        flatNumber?: string;
+      }>('/auth/unified-login', { email, password });
+
+      if (data.role === 'admin') {
+        localStorage.setItem('spms_token', data.token);
+        localStorage.setItem('spms_admin', JSON.stringify({ _id: data._id, email: data.email }));
+        setToken(data.token);
+        setAdmin({ _id: data._id, email: data.email });
+        setRole('admin');
+      } else {
+        localStorage.setItem('member_spms_token', data.token);
+        localStorage.setItem('member_spms_data', JSON.stringify({
+          _id: data._id,
+          name: data.name || '',
+          email: data.email,
+          phone: data.phone || '',
+          buildingNumber: data.buildingNumber || 28,
+          flatNumber: data.flatNumber || '',
+        }));
+        setToken(data.token);
+        setMember({
+          _id: data._id,
+          name: data.name || '',
+          email: data.email,
+          phone: data.phone || '',
+          buildingNumber: data.buildingNumber || 28,
+          flatNumber: data.flatNumber || '',
+        });
+        setRole('member');
+      }
+      return { success: true, role: data.role };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      const message = err.response?.data?.message || 'Login failed. Please check credentials.';
+      return { success: false, message };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ admin, member, token, role, loading, login, memberLogin, memberRegister, logout }}>
+    <AuthContext.Provider value={{ admin, member, token, role, loading, login, memberLogin, unifiedLogin, memberRegister, logout }}>
       {children}
     </AuthContext.Provider>
   );

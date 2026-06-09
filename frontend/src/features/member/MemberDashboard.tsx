@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import API from '../../services/api';
-import { Car, MapPin, CheckCircle2 } from 'lucide-react';
+import { Car, MapPin, CheckCircle2, Sun, Moon } from 'lucide-react';
 import type { MemberParkingSummary } from '../../types';
+import { ThemeContext } from '../../context/ThemeContext';
 
 const MemberDashboard: React.FC = () => {
+  const themeCtx = useContext(ThemeContext);
+  if (!themeCtx) throw new Error('MemberDashboard must be inside ThemeProvider');
+  const { theme, toggleTheme } = themeCtx;
+
   const [summary, setSummary] = useState<MemberParkingSummary | null>(null);
 
   useEffect(() => {
@@ -20,9 +25,20 @@ const MemberDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Member Dashboard</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">View available parking spots in real-time.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Member Dashboard</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">View available parking spots in real-time.</p>
+        </div>
+        <div>
+          <button
+            onClick={toggleTheme}
+            className="w-12 h-12 rounded-xl bg-brandPurple-50 dark:bg-brandPurple-500/10 border border-brandPurple-200 dark:border-brandPurple-500/30 flex items-center justify-center text-brandPurple-600 dark:text-amber-400 shadow-sm transition-all duration-200"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400 animate-pulse-slow" /> : <Moon className="w-5 h-5 text-brandPurple-600" />}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

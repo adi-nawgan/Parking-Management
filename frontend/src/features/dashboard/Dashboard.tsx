@@ -288,10 +288,10 @@ const Dashboard: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={toggleTheme}
-            className="w-12 h-12 rounded-xl bg-white dark:bg-darkCard border border-violet-100/75 dark:border-brandPurple-500/10 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all duration-200 shadow-sm"
+            className="w-12 h-12 rounded-xl bg-brandPurple-50 dark:bg-brandPurple-500/10 border border-brandPurple-200 dark:border-brandPurple-500/30 flex items-center justify-center text-brandPurple-600 dark:text-amber-400 shadow-sm transition-all duration-200"
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400 animate-pulse-slow" /> : <Moon className="w-5 h-5 text-slate-500" />}
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400 animate-pulse-slow" /> : <Moon className="w-5 h-5 text-brandPurple-600" />}
           </button>
 
           <button
@@ -608,7 +608,7 @@ const Dashboard: React.FC = () => {
                         className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-brandPurple-500 text-xs rounded-lg"
                       >
                         {[28, 29, 30, 31, 32, 33, 34, 35, 36, 37].map(num => (
-                          <option key={num} value={num}>Building {num}</option>
+                          <option key={num} value={num} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Building {num}</option>
                         ))}
                       </select>
                     </div>
