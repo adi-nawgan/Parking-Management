@@ -17,23 +17,57 @@ const registerMember = async (req: Request, res: Response): Promise<void> => {
   const { name, email, password, phone, buildingNumber, flatNumber } = req.body;
 
   try {
-    if (!name || !email || !password || !phone || !buildingNumber || !flatNumber) {
-      res.status(400).json({ message: 'All fields are required' });
+    if (!name || !password || !phone || !buildingNumber || !flatNumber) {
+      res.status(400).json({ message: 'All fields (except email) are required' });
       return;
     }
 
-    const existing = await Member.findOne({ email });
-    if (existing) {
-      res.status(400).json({ message: 'A member with this email already exists' });
+    const cleanPhone = phone.trim();
+    const existingPhone = await Member.findOne({ phone: cleanPhone });
+    if (existingPhone) {
+      res.status(400).json({ message: 'A member with this phone number already exists' });
       return;
     }
 
-    const member = await Member.create({ name, email, password, phone, buildingNumber, flatNumber });
+    if (email && email.trim() !== '') {
+      const cleanEmail = email.toLowerCase().trim();
+      const existingEmail = await Member.findOne({ email: cleanEmail });
+      if (existingEmail) {
+        res.status(400).json({ message: 'A member with this email already exists' });
+        return;
+      }
+    }
+
+    const memberData: Record<string, unknown> = {
+      name,
+      password,
+      phone: cleanPhone,
+      buildingNumber,
+      flatNumber,
+    };
+    if (email && email.trim() !== '') {
+      memberData.email = email.toLowerCase().trim();
+    }
+
+    const member = await Member.create(memberData);
+
+    // Automatically ensure a Resident profile exists in the database for the admin to see/manage
+    const existingResident = await Resident.findOne({ buildingNumber, flatNumber });
+    if (!existingResident) {
+      await Resident.create({
+        buildingNumber,
+        flatNumber,
+        ownerName: name,
+        phone: cleanPhone,
+        type: 'resident',
+        vehicles: [],
+      });
+    }
 
     res.status(201).json({
       _id: member._id,
       name: member.name,
-      email: member.email,
+      email: member.email || '',
       phone: member.phone,
       buildingNumber: member.buildingNumber,
       flatNumber: member.flatNumber,
@@ -45,27 +79,34 @@ const registerMember = async (req: Request, res: Response): Promise<void> => {
 };
 
 const loginMember = async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
+  const { email, password } = req.body; // email could be phone or email
 
   try {
     if (!email || !password) {
-      res.status(400).json({ message: 'Please provide email and password' });
+      res.status(400).json({ message: 'Please provide email/phone and password' });
       return;
     }
 
-    const member = await Member.findOne({ email });
+    const cleanEmailOrPhone = email.trim();
+    const member = await Member.findOne({
+      $or: [
+        { email: cleanEmailOrPhone.toLowerCase() },
+        { phone: cleanEmailOrPhone }
+      ]
+    });
+
     if (member && (await member.matchPassword(password))) {
       res.json({
         _id: member._id,
         name: member.name,
-        email: member.email,
+        email: member.email || '',
         phone: member.phone,
         buildingNumber: member.buildingNumber,
         flatNumber: member.flatNumber,
         token: generateToken(String(member._id)),
       });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(401).json({ message: 'Invalid email/phone or password' });
     }
   } catch (error) {
     res.status(500).json({ message: (error as Error).message });

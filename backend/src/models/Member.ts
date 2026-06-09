@@ -20,10 +20,10 @@ const memberSchema = new mongoose.Schema<IMember>(
     },
     email: {
       type: String,
-      required: true,
-      unique: true,
       lowercase: true,
       trim: true,
+      unique: true,
+      sparse: true,
     },
     password: {
       type: String,
@@ -32,6 +32,7 @@ const memberSchema = new mongoose.Schema<IMember>(
     phone: {
       type: String,
       required: true,
+      unique: true,
       trim: true,
     },
     buildingNumber: {

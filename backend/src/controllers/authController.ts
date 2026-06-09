@@ -39,16 +39,18 @@ const loginAdmin = async (req: Request, res: Response): Promise<void> => {
 };
 
 const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
+  const { email, password } = req.body; // email field holds email or phone
 
   try {
     if (!email || !password) {
-      res.status(400).json({ message: 'Please provide email and password' });
+      res.status(400).json({ message: 'Please provide credentials' });
       return;
     }
 
-    // 1. Check if user is an Admin
-    const admin = await Admin.findOne({ email });
+    const cleanIdentifier = email.trim();
+
+    // 1. Check if user is an Admin (Admin always uses email)
+    const admin = await Admin.findOne({ email: cleanIdentifier.toLowerCase() });
     if (admin) {
       if (await admin.matchPassword(password)) {
         res.json({
@@ -59,20 +61,25 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
         });
         return;
       } else {
-        res.status(401).json({ message: 'Invalid email or password' });
+        res.status(401).json({ message: 'Invalid credentials' });
         return;
       }
     }
 
-    // 2. If not admin, check if user is a Member
-    const member = await Member.findOne({ email });
+    // 2. If not admin, check if user is a Member (by phone or email)
+    const member = await Member.findOne({
+      $or: [
+        { email: cleanIdentifier.toLowerCase() },
+        { phone: cleanIdentifier }
+      ]
+    });
     if (member) {
       if (await member.matchPassword(password)) {
         res.json({
           role: 'member',
           _id: member._id,
           name: member.name,
-          email: member.email,
+          email: member.email || '',
           phone: member.phone,
           buildingNumber: member.buildingNumber,
           flatNumber: member.flatNumber,
@@ -80,13 +87,13 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
         });
         return;
       } else {
-        res.status(401).json({ message: 'Invalid email or password' });
+        res.status(401).json({ message: 'Invalid credentials' });
         return;
       }
     }
 
     // 3. User not found in either
-    res.status(401).json({ message: 'Invalid email or password' });
+    res.status(401).json({ message: 'Invalid credentials' });
   } catch (error) {
     res.status(500).json({ message: (error as Error).message });
   }
