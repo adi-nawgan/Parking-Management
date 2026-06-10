@@ -61,7 +61,7 @@ const Layout: React.FC = () => {
       {/* Premium Top Navbar */}
       <header className="h-16 border-b border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-darkCard px-6 flex items-center justify-between z-40 fixed top-0 left-0 right-0 transition-colors duration-300 shadow-sm">
         {/* Left Side: Logo and Title — extends sidebar dark bg */}
-        <div className="flex items-center gap-3 bg-[#0B0F19] -ml-6 pl-6 pr-4 h-16 w-56">
+        <div className="flex items-center gap-3 bg-[#0B0F19] -ml-6 pl-6 pr-4 h-16 md:w-56">
           <button 
             onClick={toggleMobile} 
             className="md:hidden text-slate-400 hover:text-white mr-1"

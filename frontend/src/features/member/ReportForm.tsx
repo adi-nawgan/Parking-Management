@@ -69,7 +69,7 @@ const ReportForm: React.FC = () => {
   const reportTypes: { value: ReportType; label: string; desc: string }[] = [
     { value: 'wrongly_parked', label: 'Wrongly Parked', desc: 'Vehicle parked outside designated area' },
     { value: 'took_extra_space', label: 'Took Extra Space', desc: 'Vehicle occupying more than one spot' },
-    { value: 'other', label: 'Other', desc: 'Any other parking violation' },
+    { value: 'vehicle_damage', label: 'Vehicle Damage', desc: 'Report damage to a vehicle' },
   ];
 
   return (

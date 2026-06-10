@@ -326,21 +326,21 @@ const ResidentList: React.FC = () => {
         </div>
       )}
 
-      {/* Slide-in Right Drawer Overlay */}
+      {/* Centered Modal Overlay */}
       {showDrawer && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="fixed inset-0 z-[100]">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm cursor-default"
             onClick={() => setShowDrawer(false)}
           ></div>
 
-          {/* Drawer Wrapper */}
-          <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-white dark:bg-darkCard border-l border-slate-200 dark:border-white/[0.08] shadow-2xl relative flex flex-col justify-between animate-slide-in">
-              
-              {/* Header */}
-              <div className="p-6 border-b border-slate-200 dark:border-white/[0.08] flex justify-between items-center bg-slate-50 dark:bg-white/[0.01]">
+          {/* Modal Wrapper */}
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white dark:bg-darkCard border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl relative flex flex-col max-h-[80vh] animate-fadeIn">
+               
+               {/* Header */}
+               <div className="shrink-0 p-6 border-b border-slate-200 dark:border-white/[0.08] flex justify-between items-center bg-slate-50 dark:bg-white/[0.01]">
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">
                   {drawerMode === 'create' ? 'Add Occupant Profile' : 'Edit Occupant Profile'}
                 </h3>
@@ -353,7 +353,7 @@ const ResidentList: React.FC = () => {
               </div>
 
               {/* Drawer Body Form */}
-              <form onSubmit={submitForm} className="flex-1 overflow-y-auto p-6 space-y-6">
+              <form onSubmit={submitForm} className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
                 
                 {/* Full name input */}
                 <div>
@@ -511,8 +511,8 @@ const ResidentList: React.FC = () => {
 
               </form>
 
-              {/* Drawer Action Footer */}
-              <div className="p-6 border-t border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.01] flex gap-3">
+               {/* Drawer Action Footer */}
+               <div className="shrink-0 p-6 border-t border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.01] flex gap-3">
                 <button
                   type="button"
                   onClick={() => setShowDrawer(false)}

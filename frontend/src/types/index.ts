@@ -128,7 +128,7 @@ export interface ThemeContextType {
 
 // ─── Member / Report Types ────────────────────────────────────────────────────
 
-export type ReportType = 'wrongly_parked' | 'took_extra_space' | 'other';
+export type ReportType = 'wrongly_parked' | 'took_extra_space' | 'vehicle_damage';
 export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 
 export interface ReportLocation {

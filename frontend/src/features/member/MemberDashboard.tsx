@@ -166,7 +166,7 @@ const MemberDashboard: React.FC = () => {
   const reportTypesList: { value: ReportType; label: string; desc: string }[] = [
     { value: 'wrongly_parked', label: 'Wrongly Parked', desc: 'Vehicle parked outside designated lines' },
     { value: 'took_extra_space', label: 'Took Extra Space', desc: 'Vehicle occupying more than one space' },
-    { value: 'other', label: 'Other violation', desc: 'Any other parking issue or blocked exits' },
+    { value: 'vehicle_damage', label: 'Vehicle Damage', desc: 'Report damage to a vehicle' },
   ];
 
   return (
