@@ -47,7 +47,7 @@ const loginAdmin = async (req: Request, res: Response): Promise<void> => {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         maxAge: 12 * 60 * 60 * 1000,
-        sameSite: 'lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       });
 
       res.json({
@@ -111,7 +111,7 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           maxAge: 12 * 60 * 60 * 1000,
-          sameSite: 'lax',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         });
 
         res.json({
@@ -169,7 +169,7 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           maxAge: 8 * 60 * 60 * 1000,
-          sameSite: 'lax',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         });
 
         res.json({
