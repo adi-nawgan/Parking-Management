@@ -8,6 +8,9 @@ export interface IMember extends Document {
   phone: string;
   buildingNumber: number;
   flatNumber: string;
+  loginAttempts: number;
+  lockUntil?: Date;
+  status: 'active' | 'deactivated';
   matchPassword(enteredPassword: string): Promise<boolean>;
 }
 
@@ -45,6 +48,18 @@ const memberSchema = new mongoose.Schema<IMember>(
       type: String,
       required: true,
       trim: true,
+    },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+    },
+    status: {
+      type: String,
+      enum: ['active', 'deactivated'],
+      default: 'active',
     },
   },
   { timestamps: true }

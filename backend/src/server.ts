@@ -6,6 +6,7 @@ import http from 'http';
 import path from 'path';
 import { Server as SocketServer } from 'socket.io';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 
 import connectDB from './config/db';
 import { notFound, errorHandler } from './middleware/errorMiddleware';
@@ -21,17 +22,19 @@ import logRoutes from './routes/logRoutes';
 import anprRoutes from './routes/anprRoutes';
 import memberRoutes from './routes/memberRoutes';
 import adminReportRoutes from './routes/adminReportRoutes';
+import auditLogRoutes from './routes/auditLogRoutes';
 
 connectDB();
 
 const app = express();
 
 app.use(cors({
-  origin: '*',
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
 
+app.use(cookieParser());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
@@ -43,6 +46,7 @@ app.use('/api/logs', logRoutes);
 app.use('/api/anpr', anprRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/admin/reports', adminReportRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

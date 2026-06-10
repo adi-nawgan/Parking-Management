@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs';
 export interface IAdmin extends Document {
   email: string;
   password: string;
+  loginAttempts: number;
+  lockUntil?: Date;
   matchPassword(enteredPassword: string): Promise<boolean>;
 }
 
@@ -19,6 +21,13 @@ const adminSchema = new mongoose.Schema<IAdmin>(
     password: {
       type: String,
       required: true,
+    },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
     },
   },
   { timestamps: true }

@@ -5,6 +5,7 @@ import ParkingReport from '../models/ParkingReport';
 import Resident from '../models/Resident';
 import CurrentlyParked from '../models/CurrentlyParked';
 import Settings from '../models/Settings';
+import AuditLog from '../models/AuditLog';
 import { AuthRequest } from '../middleware/memberAuth';
 
 const generateToken = (id: string): string => {
@@ -144,28 +145,88 @@ const getParkingSummary = async (req: Request, res: Response): Promise<void> => 
 };
 
 const searchPlateOwner = async (req: Request, res: Response): Promise<void> => {
-  const { plate } = req.query as Record<string, string | undefined>;
+  const { plate } = req.query as Record<string, unknown>;
 
-  if (!plate || plate.trim() === '') {
-    res.json([]);
+  if (!plate || typeof plate !== 'string' || plate.trim() === '') {
+    res.status(400).json({ message: 'License plate number is required' });
     return;
   }
 
+  const authReq = req as AuthRequest;
+  const member = authReq.member!;
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
   try {
-    const cleanPlate = plate.toUpperCase().trim();
+    // 1. Regex validation for Indian vehicle registration plates
+    const cleanPlate = plate.replace(/[\s-]/g, '').toUpperCase().trim();
+    const indianPlateRegex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/;
+    if (!indianPlateRegex.test(cleanPlate)) {
+      res.status(400).json({ message: 'Invalid license plate format. Must match Indian vehicle registration format (e.g., MH12AB1234)' });
+      return;
+    }
+
+    // 2. Suspicious activity check: count of searches by this member in the last hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const hourlyLookupsCount = await AuditLog.countDocuments({
+      memberId: member._id,
+      actionType: 'plate-lookup',
+      timestamp: { $gte: oneHourAgo }
+    });
+
+    const isSuspicious = hourlyLookupsCount >= 5;
+
+    if (isSuspicious) {
+      console.log(`[ALERT] Suspicious activity detected — ${member.name} from Flat ${member.flatNumber} has performed ${hourlyLookupsCount + 1} plate lookups in the last hour.`);
+      
+      try {
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+          port: Number(process.env.SMTP_PORT) || 587,
+          auth: {
+            user: process.env.SMTP_USER || '',
+            pass: process.env.SMTP_PASS || '',
+          },
+        });
+
+        await transporter.sendMail({
+          from: '"SPMS Security" <security@spms.com>',
+          to: process.env.ADMIN_EMAIL || 'admin@spms.com',
+          subject: 'Suspicious Activity Alert - SPMS',
+          text: `Suspicious activity detected — ${member.name} from Flat ${member.flatNumber} has performed ${hourlyLookupsCount + 1} plate lookups in the last hour`,
+        });
+        console.log(`Suspicious activity email alert sent for ${member.name}`);
+      } catch (err) {
+        console.error('Failed to send suspicious activity email:', err);
+      }
+    }
+
+    // 3. Log search query in AuditLog
+    await AuditLog.create({
+      memberId: member._id,
+      memberName: member.name,
+      memberFlat: `Bldg ${member.buildingNumber} Flat ${member.flatNumber}`,
+      actionType: 'plate-lookup',
+      plateSearched: cleanPlate,
+      ipAddress: ip,
+      suspiciousActivity: isSuspicious,
+    });
+
+    // 4. Perform database resident lookup
     const residents = await Resident.find({
-      'vehicles.plate': { $regex: cleanPlate },
+      'vehicles.plate': cleanPlate,
     }).lean();
 
     const results = [];
     for (const resident of residents) {
       for (const vehicle of resident.vehicles) {
-        if (vehicle.plate.includes(cleanPlate)) {
+        if (vehicle.plate === cleanPlate) {
           results.push({
             plate: vehicle.plate,
             ownerName: resident.ownerName,
             phone: resident.phone,
             buildingNumber: resident.buildingNumber,
+            flatNumber: resident.flatNumber,
           });
         }
       }
