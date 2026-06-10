@@ -1,6 +1,6 @@
 import mongoose, { Document, Model, Types } from 'mongoose';
 
-export type ReportType = 'wrongly_parked' | 'took_extra_space' | 'other';
+export type ReportType = 'wrongly_parked' | 'took_extra_space' | 'vehicle_damage';
 export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 
 export interface ILocation {
@@ -47,7 +47,7 @@ const parkingReportSchema = new mongoose.Schema<IParkingReport>(
     },
     reportType: {
       type: String,
-      enum: ['wrongly_parked', 'took_extra_space', 'other'],
+      enum: ['wrongly_parked', 'took_extra_space', 'vehicle_damage'],
       required: true,
     },
     description: {

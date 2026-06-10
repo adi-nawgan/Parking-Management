@@ -13,7 +13,7 @@ export const lookupLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20,
   statusCode: 429,
-  validate: { ip: false },
+  validate: false,
   keyGenerator: (req: any) => {
     return String(req.member?._id || req.ip);
   },
