@@ -29,6 +29,10 @@
   @apply bg-slate-400 dark:bg-slate-600;
 }
 
+.premium-card {
+  @apply bg-white dark:bg-darkCard border border-slate-200 dark:border-white/10 rounded-2xl transition-all duration-300;
+}
+
 /* Glassmorphism card utility */
 .glass-card {
   @apply bg-white/80 dark:bg-darkCard/80 border border-violet-100/70 dark:border-brandPurple-500/10 shadow-lg dark:shadow-[0_8px_32px_0_rgba(7,5,18,0.4)] backdrop-blur-md transition-colors duration-300;
@@ -64,5 +68,19 @@
   filter: blur(40px);
   pointer-events: none;
   z-index: 0;
+}
+
+/* Button Hover Micro-interactions */
+.btn-scale {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-scale:hover {
+  transform: scale(1.025);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.35), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-scale:active {
+  transform: scale(0.975);
 }
 

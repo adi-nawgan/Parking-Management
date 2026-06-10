@@ -1,5 +1,5 @@
 import React, { useContext, ReactNode } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Layout from './components/Layout';
 import MemberLayout from './components/MemberLayout';
@@ -13,6 +13,8 @@ import VisitorLogs from './features/visitors/VisitorLogs';
 import Logs from './features/logs/Logs';
 import Settings from './features/settings/Settings';
 import AdminReports from './features/admin/AdminReports';
+import AuditLogs from './features/admin/AuditLogs';
+import MemberManagement from './features/admin/MemberManagement';
 
 import MemberDashboard from './features/member/MemberDashboard';
 import ReportForm from './features/member/ReportForm';
@@ -21,6 +23,7 @@ import SearchOwner from './features/member/SearchOwner';
 
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence } from 'framer-motion';
 import type { UserRole } from './types';
 
 interface RouteGuardProps {
@@ -73,9 +76,10 @@ const PublicRoute: React.FC<RouteGuardProps> = ({ children }) => {
 };
 
 const AppContent: React.FC = () => {
+  const location = useLocation();
   return (
-    <Router>
-      <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
 
         {/* Login Page (Unified) */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -90,6 +94,8 @@ const AppContent: React.FC = () => {
           <Route path="logs" element={<Logs />} />
           <Route path="settings" element={<Settings />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="audit-logs" element={<AuditLogs />} />
+          <Route path="members" element={<MemberManagement />} />
         </Route>
 
         {/* Member Routes */}
@@ -104,7 +110,7 @@ const AppContent: React.FC = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
-    </Router>
+    </AnimatePresence>
   );
 };
 
@@ -112,17 +118,39 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <Router>
+          <AppContent />
+        </Router>
         <Toaster 
           position="top-right" 
           toastOptions={{
             style: {
-              background: '#1E293B',
+              background: '#0F172A',
               color: '#F8FAFC',
               border: '1px solid rgba(255,255,255,0.08)',
               fontSize: '13px',
-              fontWeight: 'bold',
+              fontWeight: '600',
               borderRadius: '12px',
+              padding: '12px 16px',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15)',
+            },
+            success: {
+              iconTheme: {
+                primary: '#10B981',
+                secondary: '#0F172A',
+              },
+              style: {
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+              }
+            },
+            error: {
+              iconTheme: {
+                primary: '#EF4444',
+                secondary: '#0F172A',
+              },
+              style: {
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+              }
             }
           }}
         />

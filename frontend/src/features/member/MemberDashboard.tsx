@@ -14,6 +14,7 @@ import {
   User, 
   Loader2 
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { toast } from 'react-hot-toast';
@@ -130,22 +131,36 @@ const MemberDashboard: React.FC = () => {
     }
   };
 
-  const handleOwnerSearch = async (e: React.FormEvent) => {
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [pendingSearchPlate, setPendingSearchPlate] = useState<string>('');
+
+  const handleOwnerSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchPlate.trim()) return;
+    setPendingSearchPlate(searchPlate.trim());
+    setShowConfirmModal(true);
+  };
 
+  const handleConfirmPrivacyNotice = async () => {
+    setShowConfirmModal(false);
     setSearchLoading(true);
     setSearchResults([]);
     setHasSearched(false);
     try {
-      const { data } = await API.get<PlateOwnerMatch[]>(`/members/search-plate?plate=${searchPlate.trim().toUpperCase()}`);
+      const { data } = await API.get<PlateOwnerMatch[]>(`/members/search-plate?plate=${pendingSearchPlate.toUpperCase()}`);
       setSearchResults(data);
       setHasSearched(true);
-    } catch {
-      toast.error('Failed to query plate details');
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to query plate details';
+      toast.error(message);
     } finally {
       setSearchLoading(false);
     }
+  };
+
+  const handleCancelPrivacyNotice = () => {
+    setShowConfirmModal(false);
+    setPendingSearchPlate('');
   };
 
   const reportTypesList: { value: ReportType; label: string; desc: string }[] = [
@@ -201,7 +216,7 @@ const MemberDashboard: React.FC = () => {
           {/* Report Wrong Parking */}
           <div 
             onClick={() => setActiveModal('report')}
-            className="premium-card premium-card-red p-6 cursor-pointer flex flex-col justify-between items-start gap-6 border-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+            className="premium-card p-6 cursor-pointer flex flex-col justify-between items-start gap-6 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
           >
             <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500">
               <Camera className="w-6 h-6" />
@@ -218,7 +233,7 @@ const MemberDashboard: React.FC = () => {
           {/* Search Owner */}
           <div 
             onClick={() => setActiveModal('search')}
-            className="premium-card premium-card-blue p-6 cursor-pointer flex flex-col justify-between items-start gap-6 border-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+            className="premium-card p-6 cursor-pointer flex flex-col justify-between items-start gap-6 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
           >
             <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
               <Search className="w-6 h-6" />
@@ -237,15 +252,15 @@ const MemberDashboard: React.FC = () => {
 
       {/* Mini details */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="premium-card p-5 border-slate-200">
+        <div className="premium-card p-5">
           <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Building slots</span>
           <p className="text-xl font-black text-slate-800 dark:text-white font-mono">Bldg {memberBuilding}</p>
         </div>
-        <div className="premium-card p-5 border-slate-200">
+        <div className="premium-card p-5">
           <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Total slots</span>
           <p className="text-xl font-black text-slate-800 dark:text-white font-mono">{summary?.totalCapacity || 60}</p>
         </div>
-        <div className="premium-card p-5 border-slate-200">
+        <div className="premium-card p-5">
           <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">System status</span>
           <p className="text-xl font-black text-emerald-500 flex items-center gap-1.5 font-mono">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -560,6 +575,48 @@ const MemberDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Privacy Notice Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md bg-white dark:bg-darkCard border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl p-6 text-center space-y-6"
+            >
+              <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mx-auto">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Privacy Notice</h3>
+                <p className="text-xs text-slate-550 dark:text-slate-400 leading-relaxed">
+                  You are about to view personal contact details of a resident. This action will be logged and monitored by the admin. Do you want to continue?
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleCancelPrivacyNotice}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs border border-slate-200 dark:border-white/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPrivacyNotice}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-blue-500/15"
+                >
+                  Yes, Continue
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

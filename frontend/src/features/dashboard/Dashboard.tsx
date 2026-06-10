@@ -16,6 +16,7 @@ import {
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { toast } from 'react-hot-toast';
+import { motion } from 'framer-motion';
 import type { ParkedVehicle, DashboardSummary } from '../../types';
 
 type ParkingState = 'normal' | 'overflow' | 'full';
@@ -171,7 +172,12 @@ const Dashboard: React.FC = () => {
       
       {/* Alert Header for Overflow/Full states */}
       {state !== 'normal' && (
-        <div className={`p-4 rounded-2xl border ${currentSettings.borderColor} ${currentSettings.bgColor} flex items-center justify-between gap-4 animate-pulse relative z-10 shadow-sm`}>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className={`p-4 rounded-2xl border ${currentSettings.borderColor} ${currentSettings.bgColor} flex items-center justify-between gap-4 animate-pulse relative z-10 shadow-sm`}
+        >
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-xl bg-white dark:bg-slate-900 border ${currentSettings.borderColor} shadow-inner`}>
               <BarIcon className={`w-5 h-5 ${currentSettings.textColor}`} />
@@ -188,7 +194,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <span className={`text-2xl font-black font-mono ${currentSettings.textColor}`}>{parkedCount} / {overflowLimit}</span>
-        </div>
+        </motion.div>
       )}
 
       {/* Hero Header Section */}
@@ -216,7 +222,12 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Circular Progress Speedometer Widget */}
-      <div className="premium-card p-8 flex flex-col items-center justify-center relative z-10 shadow-sm overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.35, delay: 0.05 }}
+        className="premium-card p-8 flex flex-col items-center justify-center relative z-10 shadow-sm overflow-hidden"
+      >
         {/* Speedometer Glow circles */}
         <div className="absolute inset-0 bg-gradient-to-b from-blue-500/[0.02] to-transparent pointer-events-none"></div>
         
@@ -249,13 +260,18 @@ const Dashboard: React.FC = () => {
             Status: <span className={`font-bold uppercase ${currentSettings.textColor}`}>{state}</span>
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* KPI Stats Scoreboard */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
         
         {/* Total Capacity card */}
-        <div className="premium-card p-6 flex items-center justify-between border-slate-200 hover:border-blue-500/20">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="premium-card p-6 flex items-center justify-between border-slate-200 hover:border-blue-500/20"
+        >
           <div className="space-y-1">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Stalls</p>
             <p className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">{capacity}</p>
@@ -263,12 +279,17 @@ const Dashboard: React.FC = () => {
           <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
             <TrendingUp className="w-6 h-6" />
           </div>
-        </div>
+        </motion.div>
 
         {/* Parked count card */}
-        <div className={`premium-card p-6 flex items-center justify-between ${
-          state === 'full' ? 'border-rose-500/35 shadow-[0_0_15px_rgba(239,68,68,0.08)]' : 'border-slate-200'
-        }`}>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+          className={`premium-card p-6 flex items-center justify-between ${
+            state === 'full' ? 'border-rose-500/35 shadow-[0_0_15px_rgba(239,68,68,0.08)]' : 'border-slate-200'
+          }`}
+        >
           <div className="space-y-1">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Currently Inside</p>
             <p className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">{parkedCount}</p>
@@ -278,10 +299,15 @@ const Dashboard: React.FC = () => {
           }`}>
             <Car className="w-6 h-6" />
           </div>
-        </div>
+        </motion.div>
 
         {/* Available spots card */}
-        <div className="premium-card p-6 flex items-center justify-between border-slate-200 hover:border-emerald-500/20">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="premium-card p-6 flex items-center justify-between border-slate-200 hover:border-emerald-500/20"
+        >
           <div className="space-y-1">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Available Spots</p>
             <p className={`text-3xl font-extrabold font-mono tracking-tight ${available <= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
@@ -293,7 +319,7 @@ const Dashboard: React.FC = () => {
           }`}>
             <CheckCircle2 className="w-6 h-6" />
           </div>
-        </div>
+        </motion.div>
 
       </div>
 

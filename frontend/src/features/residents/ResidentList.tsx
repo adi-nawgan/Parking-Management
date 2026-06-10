@@ -14,6 +14,7 @@ import {
   Car,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { motion } from 'framer-motion';
 import type { Resident, Vehicle } from '../../types';
 
 const ResidentList: React.FC = () => {
@@ -132,17 +133,43 @@ const ResidentList: React.FC = () => {
   };
 
   const handleDelete = async (id: string, name: string): Promise<void> => {
-    if (!window.confirm(`Are you sure you want to remove ${name}? All vehicle records will be unlinked.`)) {
-      return;
-    }
-    try {
-      await API.delete(`/residents/${id}`);
-      toast.success(`Removed profile for ${name}`);
-      fetchResidents();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e.response?.data?.message || 'Delete operation failed');
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-3 p-1 min-w-[250px]">
+        <p className="text-slate-200 text-xs font-semibold">
+          Are you sure you want to remove {name}? All vehicle records will be unlinked.
+        </p>
+        <div className="flex justify-end gap-2.5">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-[10px] font-bold text-slate-450 rounded-lg border border-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await API.delete(`/residents/${id}`);
+                toast.success(`Removed profile for ${name}`);
+                fetchResidents();
+              } catch (err: unknown) {
+                const e = err as { response?: { data?: { message?: string } } };
+                toast.error(e.response?.data?.message || 'Delete operation failed');
+              }
+            }}
+            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-[10px] font-bold text-white rounded-lg shadow-sm"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+      style: {
+        background: '#0F172A',
+        border: '1px solid rgba(245, 158, 11, 0.25)', // warning accent
+      }
+    });
   };
 
   return (
@@ -195,9 +222,12 @@ const ResidentList: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {residents.map((res) => (
-            <div
+          {residents.map((res, index) => (
+            <motion.div
               key={res._id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.2) }}
               className={`
                 premium-card rounded-2xl p-6 border transition-all duration-300 flex flex-col justify-between gap-6 relative group
                 ${res.isParked ? 'border-emerald-500/40 shadow-md shadow-emerald-500/[0.03]' : 'border-slate-200'}
@@ -291,7 +321,7 @@ const ResidentList: React.FC = () => {
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}

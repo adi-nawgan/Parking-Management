@@ -16,33 +16,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('spms_token');
-    const storedAdmin = localStorage.getItem('spms_admin');
-    const storedMemberToken = localStorage.getItem('member_spms_token');
-    const storedMember = localStorage.getItem('member_spms_data');
-
-    if (storedToken && storedAdmin) {
-      setToken(storedToken);
-      setAdmin(JSON.parse(storedAdmin) as AdminUser);
+  const checkAuth = useCallback(async () => {
+    try {
+      // 1. Try fetching admin profile
+      const adminRes = await API.get('/auth/profile');
+      setAdmin(adminRes.data);
       setRole('admin');
-    } else if (storedMemberToken && storedMember) {
-      setToken(storedMemberToken);
-      setMember(JSON.parse(storedMember) as MemberUser);
-      setRole('member');
+      setToken('cookie-present');
+    } catch (adminErr) {
+      try {
+        // 2. Try fetching member profile
+        const memberRes = await API.get('/members/profile');
+        setMember(memberRes.data);
+        setRole('member');
+        setToken('cookie-present');
+      } catch (memberErr) {
+        // Not authenticated
+        setAdmin(null);
+        setMember(null);
+        setRole(null);
+        setToken(null);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('spms_token');
-    localStorage.removeItem('spms_admin');
-    localStorage.removeItem('member_spms_token');
-    localStorage.removeItem('member_spms_data');
-    setToken(null);
-    setAdmin(null);
-    setMember(null);
-    setRole(null);
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  const logout = useCallback(async () => {
+    try {
+      await API.post('/auth/logout');
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    } finally {
+      localStorage.removeItem('spms_admin');
+      localStorage.removeItem('member_spms_data');
+      setToken(null);
+      setAdmin(null);
+      setMember(null);
+      setRole(null);
+    }
   }, []);
 
   useInactivity(() => {
@@ -59,10 +75,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      const { data } = await API.post<{ token: string; _id: string; email: string }>('/auth/login', { email, password });
-      localStorage.setItem('spms_token', data.token);
+      const { data } = await API.post<{ _id: string; email: string }>('/auth/login', { email, password });
       localStorage.setItem('spms_admin', JSON.stringify({ _id: data._id, email: data.email }));
-      setToken(data.token);
+      setToken('cookie-present');
       setAdmin({ _id: data._id, email: data.email });
       setRole('admin');
       return { success: true };
@@ -75,10 +90,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const memberLogin = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      const { data } = await API.post<{ token: string; _id: string; name: string; email: string; phone: string; buildingNumber: number; flatNumber: string }>('/members/login', { email, password });
-      localStorage.setItem('member_spms_token', data.token);
+      const { data } = await API.post<{ _id: string; name: string; email: string; phone: string; buildingNumber: number; flatNumber: string }>('/members/login', { email, password });
       localStorage.setItem('member_spms_data', JSON.stringify({ _id: data._id, name: data.name, email: data.email, phone: data.phone, buildingNumber: data.buildingNumber, flatNumber: data.flatNumber }));
-      setToken(data.token);
+      setToken('cookie-present');
       setMember({ _id: data._id, name: data.name, email: data.email, phone: data.phone, buildingNumber: data.buildingNumber, flatNumber: data.flatNumber });
       setRole('member');
       return { success: true };
@@ -91,12 +105,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const memberRegister = async (regData: { name: string; email: string; password: string; phone: string; buildingNumber: number; flatNumber: string }): Promise<{ success: boolean; message?: string }> => {
     try {
-      const { data } = await API.post<{ token: string; _id: string; name: string; email: string; phone: string; buildingNumber: number; flatNumber: string }>('/members/register', regData);
-      localStorage.setItem('member_spms_token', data.token);
-      localStorage.setItem('member_spms_data', JSON.stringify({ _id: data._id, name: data.name, email: data.email, phone: data.phone, buildingNumber: data.buildingNumber, flatNumber: data.flatNumber }));
-      setToken(data.token);
-      setMember({ _id: data._id, name: data.name, email: data.email, phone: data.phone, buildingNumber: data.buildingNumber, flatNumber: data.flatNumber });
-      setRole('member');
+      // Admins register members directly now. This registers a member without logging them in immediately on current client.
+      await API.post('/members/register', regData);
       return { success: true };
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -109,7 +119,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const { data } = await API.post<{
         role: UserRole;
-        token: string;
         _id: string;
         email: string;
         name?: string;
@@ -118,14 +127,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         flatNumber?: string;
       }>('/auth/unified-login', { email, password });
 
+      setToken('cookie-present');
+      setRole(data.role);
+
       if (data.role === 'admin') {
-        localStorage.setItem('spms_token', data.token);
         localStorage.setItem('spms_admin', JSON.stringify({ _id: data._id, email: data.email }));
-        setToken(data.token);
         setAdmin({ _id: data._id, email: data.email });
-        setRole('admin');
       } else {
-        localStorage.setItem('member_spms_token', data.token);
         localStorage.setItem('member_spms_data', JSON.stringify({
           _id: data._id,
           name: data.name || '',
@@ -134,7 +142,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           buildingNumber: data.buildingNumber || 28,
           flatNumber: data.flatNumber || '',
         }));
-        setToken(data.token);
         setMember({
           _id: data._id,
           name: data.name || '',
@@ -143,7 +150,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           buildingNumber: data.buildingNumber || 28,
           flatNumber: data.flatNumber || '',
         });
-        setRole('member');
       }
       return { success: true, role: data.role };
     } catch (error: unknown) {

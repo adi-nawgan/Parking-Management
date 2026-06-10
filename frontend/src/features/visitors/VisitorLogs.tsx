@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../services/api';
+import PageTransition from '../shared/PageTransition';
 import {
   ClipboardList,
   XCircle,
   RefreshCw
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import type { VisitorLog } from '../../types';
 
 const VisitorLogs: React.FC = () => {
@@ -66,20 +68,47 @@ const VisitorLogs: React.FC = () => {
   };
 
   const handleLogExit = async (vehiclePlate: string): Promise<void> => {
-    if (!window.confirm(`Are you sure you want to log exit for vehicle ${vehiclePlate}?`)) {
-      return;
-    }
-    try {
-      await API.post('/dashboard/exit', { plate: vehiclePlate });
-      fetchVisitorLogs();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      alert(e.response?.data?.message || 'Failed to log vehicle exit');
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-3 p-1 min-w-[250px]">
+        <p className="text-slate-200 text-xs font-semibold">
+          Are you sure you want to log exit for vehicle {vehiclePlate}?
+        </p>
+        <div className="flex justify-end gap-2.5">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-[10px] font-bold text-slate-450 rounded-lg border border-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await API.post('/dashboard/exit', { plate: vehiclePlate });
+                toast.success(`Vehicle ${vehiclePlate} logged out successfully`);
+                fetchVisitorLogs();
+              } catch (err: unknown) {
+                const e = err as { response?: { data?: { message?: string } } };
+                toast.error(e.response?.data?.message || 'Failed to log vehicle exit');
+              }
+            }}
+            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-[10px] font-bold text-white rounded-lg shadow-sm"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+      style: {
+        background: '#0F172A',
+        border: '1px solid rgba(245, 158, 11, 0.25)', // warning accent
+      }
+    });
   };
 
   return (
-    <div className="space-y-8">
+    <PageTransition><div className="space-y-8">
 
       {/* Header */}
       <div>
@@ -256,7 +285,7 @@ const VisitorLogs: React.FC = () => {
         )}
       </div>
 
-    </div>
+    </div></PageTransition>
   );
 };
 
