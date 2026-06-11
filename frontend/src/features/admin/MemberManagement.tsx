@@ -121,7 +121,7 @@ const MemberManagement: React.FC = () => {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="btn-scale flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-650 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-500/10 transition-all self-start sm:self-center"
+          className="btn-scale flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-500/10 transition-all self-start sm:self-center"
         >
           <UserPlus className="w-4 h-4" />
           <span>Add Member Account</span>
