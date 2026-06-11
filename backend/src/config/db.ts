@@ -27,19 +27,17 @@ const seedDefaultData = async (): Promise<void> => {
       console.log('Default settings seeded successfully.');
     }
 
-    await Admin.updateOne(
-      { email: 'admin@society.com' },
-      {
-        $set: {
-          email: 'admin@society.com',
-          password: 'adminpassword123',
-          loginAttempts: 0,
-          lockUntil: undefined,
-        },
-      },
-      { upsert: true }
-    );
-    console.log('Default Admin verified: admin@society.com / adminpassword123');
+    const admin = await Admin.findOne({ email: 'admin@society.com' });
+    if (!admin) {
+      await Admin.create({ email: 'admin@society.com', password: 'adminpassword123' });
+      console.log('Default Admin created: admin@society.com / adminpassword123');
+    } else {
+      admin.password = 'adminpassword123';
+      admin.loginAttempts = 0;
+      admin.lockUntil = undefined;
+      await admin.save();
+      console.log('Default Admin password reset: admin@society.com / adminpassword123');
+    }
   } catch (err) {
     console.error(`Seeding error: ${(err as Error).message}`);
   }
