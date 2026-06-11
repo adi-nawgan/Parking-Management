@@ -54,6 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       localStorage.removeItem('spms_admin');
       localStorage.removeItem('member_spms_data');
+      localStorage.removeItem('auth_token');
       setToken(null);
       setAdmin(null);
       setMember(null);
@@ -118,6 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const unifiedLogin = async (email: string, password: string): Promise<{ success: boolean; role?: UserRole; message?: string }> => {
     try {
       const { data } = await API.post<{
+        token: string;
         role: UserRole;
         _id: string;
         email: string;
@@ -127,7 +129,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         flatNumber?: string;
       }>('/auth/unified-login', { email, password });
 
-      setToken('cookie-present');
+      localStorage.setItem('auth_token', data.token);
+      setToken(data.token);
       setRole(data.role);
 
       if (data.role === 'admin') {

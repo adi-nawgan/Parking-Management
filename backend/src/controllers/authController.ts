@@ -54,6 +54,7 @@ const loginAdmin = async (req: Request, res: Response): Promise<void> => {
         _id: admin._id,
         email: admin.email,
         role: 'admin',
+        token,
       });
     } else {
       let attempts = 0;
@@ -118,6 +119,7 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
           role: 'admin',
           _id: admin._id,
           email: admin.email,
+          token,
         });
         return;
       } else {
@@ -180,6 +182,7 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
           phone: member.phone,
           buildingNumber: member.buildingNumber,
           flatNumber: member.flatNumber,
+          token,
         });
         return;
       } else {
@@ -218,7 +221,7 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
 };
 
 const logoutUser = async (req: Request, res: Response): Promise<void> => {
-  const token = req.cookies.token;
+  const token = req.cookies.token || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
   if (token) {
     try {
       await Blacklist.create({ token });

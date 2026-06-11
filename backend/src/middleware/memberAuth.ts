@@ -12,7 +12,12 @@ interface JwtPayload {
 }
 
 const protectMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const token = req.cookies?.token;
+  let token = req.cookies?.token;
+
+  // Fallback: accept Bearer token from Authorization header
+  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
 
   if (!token) {
     res.status(401).json({ message: 'Not authorized, no token provided' });
