@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import API from '../services/api';
 import useInactivity from '../hooks/useInactivity';
-import type { AuthContextType, AdminUser, MemberUser, UserRole } from '../types';
+import type { AuthContextType, AdminUser, MemberUser, SecurityUser, UserRole } from '../types';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -11,6 +11,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
+  const [security, setSecurity] = useState<SecurityUser | null>(null);
   const [member, setMember] = useState<MemberUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
@@ -25,17 +26,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken('cookie-present');
     } catch (adminErr) {
       try {
-        // 2. Try fetching member profile
-        const memberRes = await API.get('/members/profile');
-        setMember(memberRes.data);
-        setRole('member');
+        // 2. Try fetching security guard profile
+        const securityRes = await API.get('/security/profile');
+        setSecurity(securityRes.data);
+        setRole('security');
         setToken('cookie-present');
-      } catch (memberErr) {
-        // Not authenticated
-        setAdmin(null);
-        setMember(null);
-        setRole(null);
-        setToken(null);
+      } catch (securityErr) {
+        try {
+          // 3. Try fetching member profile
+          const memberRes = await API.get('/members/profile');
+          setMember(memberRes.data);
+          setRole('member');
+          setToken('cookie-present');
+        } catch (memberErr) {
+          // Not authenticated
+          setAdmin(null);
+          setSecurity(null);
+          setMember(null);
+          setRole(null);
+          setToken(null);
+        }
       }
     } finally {
       setLoading(false);
@@ -53,10 +63,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout request failed:', err);
     } finally {
       localStorage.removeItem('spms_admin');
+      localStorage.removeItem('spms_security');
       localStorage.removeItem('member_spms_data');
       localStorage.removeItem('auth_token');
       setToken(null);
       setAdmin(null);
+      setSecurity(null);
       setMember(null);
       setRole(null);
     }
@@ -136,6 +148,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (data.role === 'admin') {
         localStorage.setItem('spms_admin', JSON.stringify({ _id: data._id, email: data.email }));
         setAdmin({ _id: data._id, email: data.email });
+      } else if (data.role === 'security') {
+        localStorage.setItem('spms_security', JSON.stringify({
+          _id: data._id,
+          name: data.name || '',
+          email: data.email,
+          phone: data.phone || '',
+        }));
+        setSecurity({
+          _id: data._id,
+          name: data.name || '',
+          email: data.email,
+          phone: data.phone || '',
+        });
       } else {
         localStorage.setItem('member_spms_data', JSON.stringify({
           _id: data._id,
@@ -163,7 +188,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ admin, member, token, role, loading, login, memberLogin, unifiedLogin, memberRegister, logout }}>
+    <AuthContext.Provider value={{ admin, security, member, token, role, loading, login, memberLogin, unifiedLogin, memberRegister, logout }}>
       {children}
     </AuthContext.Provider>
   );

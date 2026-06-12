@@ -1,9 +1,9 @@
 import { Router } from 'express';
 const router = Router();
 import { getLogs, exportLogsCSV } from '../controllers/logController';
-import { protect } from '../middleware/authMiddleware';
+import { protectAdminOrGuard } from '../middleware/authOrGuard';
 
-router.get('/', protect, getLogs);
-router.get('/export', protect, exportLogsCSV);
+router.get('/', protectAdminOrGuard, getLogs);
+router.get('/export', protectAdminOrGuard, exportLogsCSV);
 
 export default router;

@@ -7,10 +7,11 @@ import {
   recordVehicleExit,
 } from '../controllers/dashboardController';
 import { protect } from '../middleware/authMiddleware';
+import { protectAdminOrGuard } from '../middleware/authOrGuard';
 
 router.get('/summary', protect, getDashboardSummary);
 router.get('/search-plate', protect, searchPlate);
-router.post('/entry', protect, recordVehicleEntry);
-router.post('/exit', protect, recordVehicleExit);
+router.post('/entry', protectAdminOrGuard, recordVehicleEntry);
+router.post('/exit', protectAdminOrGuard, recordVehicleExit);
 
 export default router;

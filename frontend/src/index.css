@@ -6,11 +6,10 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-800 dark:bg-darkBg dark:text-slate-100 font-sans antialiased overflow-x-hidden transition-colors duration-300;
+    @apply dark:bg-darkBg dark:text-slate-100 font-sans antialiased overflow-x-hidden transition-colors duration-300;
   }
 }
 
-/* Custom Scrollbar for modern look */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -33,7 +32,6 @@
   @apply bg-white dark:bg-darkCard border border-slate-200 dark:border-white/10 rounded-2xl transition-all duration-300;
 }
 
-/* Glassmorphism card utility */
 .glass-card {
   @apply bg-white/80 dark:bg-darkCard/80 border border-violet-100/70 dark:border-brandPurple-500/10 shadow-lg dark:shadow-[0_8px_32px_0_rgba(7,5,18,0.4)] backdrop-blur-md transition-colors duration-300;
 }
@@ -42,7 +40,6 @@
   @apply bg-white/95 dark:bg-darkBg/95 border-r border-violet-100/70 dark:border-brandPurple-500/10 backdrop-blur-lg transition-colors duration-300;
 }
 
-/* Pulse animation highlights */
 @keyframes pulseGlowPurple {
   0%, 100% {
     box-shadow: 0 0 5px rgba(139, 92, 246, 0.2);
@@ -58,7 +55,6 @@
   animation: pulseGlowPurple 2s infinite;
 }
 
-/* Subtle background glowing spots */
 .bg-glow-spot {
   position: absolute;
   width: 350px;
@@ -70,7 +66,6 @@
   z-index: 0;
 }
 
-/* Button Hover Micro-interactions */
 .btn-scale {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -83,4 +78,3 @@
 .btn-scale:active {
   transform: scale(0.975);
 }
-

@@ -97,6 +97,13 @@ export interface AdminUser {
   email: string;
 }
 
+export interface SecurityUser {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export interface MemberUser {
   _id: string;
   name: string;
@@ -106,10 +113,11 @@ export interface MemberUser {
   flatNumber: string;
 }
 
-export type UserRole = 'admin' | 'member';
+export type UserRole = 'admin' | 'security' | 'member';
 
 export interface AuthContextType {
   admin: AdminUser | null;
+  security: SecurityUser | null;
   member: MemberUser | null;
   token: string | null;
   role: UserRole | null;

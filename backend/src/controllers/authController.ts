@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import Admin, { IAdmin } from '../models/Admin';
 import Member from '../models/Member';
+import SecurityGuard from '../models/SecurityGuard';
 import AuditLog from '../models/AuditLog';
 import Blacklist from '../models/Blacklist';
 
@@ -142,7 +143,55 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    // 2. If not admin, check if user is a Member (by phone or email)
+    // 2. If not admin, check if user is a Security Guard
+    const guard = await SecurityGuard.findOne({ email: cleanIdentifier.toLowerCase() });
+    if (guard) {
+      if (guard.status === 'deactivated') {
+        res.status(403).json({ message: 'Account deactivated' });
+        return;
+      }
+
+      if (guard.lockUntil && guard.lockUntil.getTime() > Date.now()) {
+        const mins = getLockoutRemainingMinutes(guard.lockUntil);
+        res.status(403).json({ message: `Account locked. Try again in ${mins} minutes` });
+        return;
+      }
+
+      if (await guard.matchPassword(password)) {
+        guard.loginAttempts = 0;
+        guard.lockUntil = undefined;
+        await guard.save();
+
+        const token = generateToken(String(guard._id), '12h');
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 12 * 60 * 60 * 1000,
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        });
+
+        res.json({
+          role: 'security',
+          _id: guard._id,
+          name: guard.name,
+          email: guard.email,
+          phone: guard.phone,
+          token,
+        });
+        return;
+      } else {
+        guard.loginAttempts = (guard.loginAttempts || 0) + 1;
+        if (guard.loginAttempts >= 5) {
+          guard.lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+        }
+        await guard.save();
+
+        res.status(401).json({ message: 'Invalid credentials' });
+        return;
+      }
+    }
+
+    // 3. If not admin or guard, check if user is a Member (by phone or email)
     const member = await Member.findOne({
       $or: [
         { email: cleanIdentifier.toLowerCase() },
@@ -205,7 +254,7 @@ const unifiedLogin = async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    // 3. User not found in either
+    // 4. User not found in any role
     await AuditLog.create({
       actionType: 'failed-login',
       ipAddress: req.ip || req.socket.remoteAddress || 'unknown',

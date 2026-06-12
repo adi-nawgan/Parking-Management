@@ -1,8 +1,8 @@
 import { Router } from 'express';
 const router = Router();
 import { getVisitorLogs } from '../controllers/visitorController';
-import { protect } from '../middleware/authMiddleware';
+import { protectAdminOrGuard } from '../middleware/authOrGuard';
 
-router.get('/', protect, getVisitorLogs);
+router.get('/', protectAdminOrGuard, getVisitorLogs);
 
 export default router;

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Layout from './components/Layout';
 import MemberLayout from './components/MemberLayout';
+import SecurityLayout from './components/SecurityLayout';
 
 import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
@@ -15,11 +16,14 @@ import Settings from './features/settings/Settings';
 import AdminReports from './features/admin/AdminReports';
 import AuditLogs from './features/admin/AuditLogs';
 import MemberManagement from './features/admin/MemberManagement';
+import GuardManagement from './features/admin/GuardManagement';
 
 import MemberDashboard from './features/member/MemberDashboard';
 import ReportForm from './features/member/ReportForm';
 import MyReports from './features/member/MyReports';
 import SearchOwner from './features/member/SearchOwner';
+
+import SecurityDashboard from './features/security/SecurityDashboard';
 
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
@@ -69,6 +73,9 @@ const PublicRoute: React.FC<RouteGuardProps> = ({ children }) => {
   if (authCtx.token && authCtx.role === 'admin') {
     return <Navigate to="/" replace />;
   }
+  if (authCtx.token && authCtx.role === 'security') {
+    return <Navigate to="/security" replace />;
+  }
   if (authCtx.token && authCtx.role === 'member') {
     return <Navigate to="/member" replace />;
   }
@@ -87,8 +94,6 @@ const AppContent: React.FC = () => {
         {/* Admin Routes */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
-          <Route path="entry" element={<VehicleEntry />} />
-          <Route path="exit" element={<VehicleExit />} />
           <Route path="residents" element={<ResidentList />} />
           <Route path="visitors" element={<VisitorLogs />} />
           <Route path="logs" element={<Logs />} />
@@ -96,6 +101,16 @@ const AppContent: React.FC = () => {
           <Route path="reports" element={<AdminReports />} />
           <Route path="audit-logs" element={<AuditLogs />} />
           <Route path="members" element={<MemberManagement />} />
+          <Route path="security-guards" element={<GuardManagement />} />
+        </Route>
+
+        {/* Security Guard Routes */}
+        <Route path="/security" element={<RoleRoute role="security"><SecurityLayout /></RoleRoute>}>
+          <Route index element={<SecurityDashboard />} />
+          <Route path="entry" element={<VehicleEntry />} />
+          <Route path="exit" element={<VehicleExit />} />
+          <Route path="visitors" element={<VisitorLogs />} />
+          <Route path="logs" element={<Logs />} />
         </Route>
 
         {/* Member Routes */}

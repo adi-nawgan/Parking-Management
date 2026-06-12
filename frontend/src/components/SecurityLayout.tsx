@@ -4,21 +4,18 @@ import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import {
   LayoutDashboard,
-  Users,
+  ArrowUpRight,
+  ArrowDownLeft,
   ClipboardList,
   FileClock,
-  Settings,
   LogOut,
   Menu,
   X,
-  ShieldAlert,
   Sun,
   Moon,
-  AlertTriangle,
   Car,
   Shield,
-  UserCheck,
-  LucideIcon
+  LucideIcon,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -27,27 +24,23 @@ interface MenuItem {
   icon: LucideIcon;
 }
 
-const Layout: React.FC = () => {
+const SecurityLayout: React.FC = () => {
   const authCtx = useContext(AuthContext);
   const themeCtx = useContext(ThemeContext);
 
-  if (!authCtx || !themeCtx) throw new Error('Layout must be inside AuthProvider and ThemeProvider');
+  if (!authCtx || !themeCtx) throw new Error('SecurityLayout must be inside AuthProvider and ThemeProvider');
 
-  const { admin, logout } = authCtx;
+  const { security, logout } = authCtx;
   const { theme, toggleTheme } = themeCtx;
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
 
   const menuItems: MenuItem[] = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Residents', path: '/residents', icon: Users },
-    { name: 'Members', path: '/members', icon: UserCheck },
-    { name: 'Visitors', path: '/visitors', icon: ClipboardList },
-    { name: 'Logs', path: '/logs', icon: FileClock },
-    { name: 'Complaints', path: '/reports', icon: AlertTriangle },
-    { name: 'Audit Logs', path: '/audit-logs', icon: Shield },
-    { name: 'Security Guards', path: '/security-guards', icon: ShieldAlert },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    { name: 'Dashboard', path: '/security', icon: LayoutDashboard },
+    { name: 'Vehicle Entry', path: '/security/entry', icon: ArrowUpRight },
+    { name: 'Vehicle Exit', path: '/security/exit', icon: ArrowDownLeft },
+    { name: 'Visitors', path: '/security/visitors', icon: ClipboardList },
+    { name: 'Logs', path: '/security/logs', icon: FileClock },
   ];
 
   const toggleMobile = (): void => setMobileOpen(!mobileOpen);
@@ -55,52 +48,48 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-darkBg text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-300">
 
-      {/* Premium Top Navbar */}
       <header className="h-16 border-b border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-darkCard px-6 flex items-center justify-between z-40 fixed top-0 left-0 right-0 transition-colors duration-300 shadow-sm">
-        {/* Left Side: Logo and Title — extends sidebar dark bg */}
         <div className="flex items-center gap-3 bg-[#0B0F19] -ml-6 pl-6 pr-4 h-16 md:w-56">
-          <button 
-            onClick={toggleMobile} 
+          <button
+            onClick={toggleMobile}
             className="md:hidden text-slate-400 hover:text-white mr-1"
           >
             <Menu className="w-6 h-6" />
           </button>
-          
-          <div className="w-9 h-9 rounded-xl bg-[#0B0F19] flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Car className="w-5 h-5 text-white" />
+
+          <div className="w-9 h-9 rounded-xl bg-[#0B0F19] flex items-center justify-center shadow-lg shadow-amber-500/20">
+            <Shield className="w-5 h-5 text-amber-400" />
           </div>
           <div className="flex flex-col">
             <span className="font-extrabold text-sm tracking-wider text-white leading-none">
-              SPMS Console
+              SPMS Guard
             </span>
             <span className="text-[8px] tracking-[0.2em] font-extrabold text-slate-500 uppercase mt-0.5">
-              Society Surveillance
+              Security Console
             </span>
           </div>
         </div>
 
-        {/* Right Side: Theme, User Details, and Logout — light header bg */}
         <div className="flex items-center gap-4">
-          <button 
-            onClick={toggleTheme} 
+          <button
+            onClick={toggleTheme}
             className="w-10 h-10 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/85 border border-slate-200/50 dark:border-white/5 flex items-center justify-center text-slate-500 dark:text-amber-400 transition-all duration-200 hover:scale-[1.02]"
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
 
-          {/* User Profile Badge (Desktop) */}
-          <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-slate-200 dark:border-white/[0.08]">
+          <div className="flex items-center gap-3 pl-3 border-l border-slate-200 dark:border-white/[0.08]">
             <div className="flex flex-col text-right">
               <span className="text-xs font-bold text-slate-900 dark:text-slate-200">
-                {admin?.email?.split('@')[0] || 'Administrator'}
+                {security?.name || 'Security Guard'}
               </span>
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
-                System Admin
+                On Duty
               </span>
             </div>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-extrabold text-xs shadow-sm ring-2 ring-blue-500/20">
-              A
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-600 to-orange-500 flex items-center justify-center text-white font-extrabold text-xs shadow-sm ring-2 ring-amber-500/20">
+              S
             </div>
           </div>
 
@@ -114,9 +103,7 @@ const Layout: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Drawer/Sidebar container */}
       <div className="pt-16 flex flex-1 relative min-h-0">
-        {/* Desktop Sidebar Navigation */}
         <aside className="w-56 border-r border-slate-800 bg-[#0B0F19] p-4 hidden md:flex md:flex-col flex-shrink-0 fixed top-16 bottom-0 left-0 z-30 shadow-lg">
           <nav className="space-y-1">
             {menuItems.map((item) => {
@@ -129,11 +116,11 @@ const Layout: React.FC = () => {
                   className={`
                     flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 border
                     ${isActive
-                      ? 'bg-blue-500/15 text-blue-400 font-bold shadow-sm border-blue-500/20'
+                      ? 'bg-amber-500/15 text-amber-400 font-bold shadow-sm border-amber-500/20'
                       : 'text-slate-400 border-white/5 hover:bg-white/10 hover:border-white/10 hover:text-white'}
                   `}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-500' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-amber-500' : 'text-slate-400'}`} />
                   {item.name}
                 </Link>
               );
@@ -141,28 +128,25 @@ const Layout: React.FC = () => {
           </nav>
         </aside>
 
-        {/* Mobile Slide-in Drawer Navigation */}
         <div className={`
           fixed inset-0 z-50 md:hidden transition-opacity duration-300
           ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
         `}>
-          {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
             onClick={toggleMobile}
           />
-          {/* Menu Drawer */}
           <aside className={`
             absolute top-0 bottom-0 left-0 w-56 bg-[#0B0F19] p-4 border-r border-white/5 flex flex-col justify-between transition-transform duration-300 ease-out shadow-2xl
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
           `}>
             <div>
               <div className="flex items-center gap-2 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
-                  <Car className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white">
+                  <Shield className="w-4 h-4" />
                 </div>
-                <span className="font-bold text-sm text-slate-200 flex-1">SPMS Admin</span>
-                <button 
+                <span className="font-bold text-sm text-slate-200 flex-1">SPMS Guard</span>
+                <button
                   onClick={toggleMobile}
                   className="text-slate-400 hover:text-white"
                 >
@@ -182,11 +166,11 @@ const Layout: React.FC = () => {
                       className={`
                         flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 border
                         ${isActive
-                          ? 'bg-blue-500/15 text-blue-400 font-bold border-blue-500/20'
+                          ? 'bg-amber-500/15 text-amber-400 font-bold border-amber-500/20'
                           : 'text-slate-400 border-white/5 hover:bg-white/10 hover:border-white/10 hover:text-white'}
                       `}
                     >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-blue-500' : 'text-slate-400'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-amber-500' : 'text-slate-400'}`} />
                       {item.name}
                     </Link>
                   );
@@ -195,18 +179,17 @@ const Layout: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-900/60 border border-white/5">
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-extrabold text-xs">
-                A
+              <div className="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center text-white font-extrabold text-xs">
+                S
               </div>
               <div className="overflow-hidden">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Active Admin</p>
-                <p className="text-xs font-bold text-slate-300 truncate">{admin?.email || 'admin@society.com'}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">On Duty</p>
+                <p className="text-xs font-bold text-slate-300 truncate">{security?.name || 'Security Guard'}</p>
               </div>
             </div>
           </aside>
         </div>
 
-        {/* Main Content Area */}
         <div className="flex-1 md:pl-56 flex flex-col min-w-0 transition-all duration-300">
           <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
             <Outlet />
@@ -218,4 +201,4 @@ const Layout: React.FC = () => {
   );
 };
 
-export default Layout;
+export default SecurityLayout;

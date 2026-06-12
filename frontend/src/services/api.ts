@@ -29,6 +29,7 @@ API.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       console.warn('Unauthorized access detected. Logging out...');
       localStorage.removeItem('spms_admin');
+      localStorage.removeItem('spms_security');
       localStorage.removeItem('member_spms_data');
       localStorage.removeItem('auth_token');
       window.dispatchEvent(new Event('auth_session_expired'));

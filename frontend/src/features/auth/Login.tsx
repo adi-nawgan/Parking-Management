@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { Mail, Lock, Eye, EyeOff, Loader2, Car, ShieldCheck, UserCheck, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, Car, ShieldCheck, UserCheck, ArrowRight, Shield } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import PageTransition from '../shared/PageTransition';
 
@@ -11,8 +11,8 @@ const Login: React.FC = () => {
   const { unifiedLogin } = authCtx;
   const navigate = useNavigate();
 
-  // Tab state for login: 'admin' or 'member'
-  const [loginRole, setLoginRole] = useState<'admin' | 'member'>('admin');
+  // Tab state for login: 'admin', 'security' or 'member'
+  const [loginRole, setLoginRole] = useState<'admin' | 'security' | 'member'>('admin');
 
   // Input states
   const [email, setEmail] = useState<string>('');
@@ -38,6 +38,8 @@ const Login: React.FC = () => {
       toast.success(`Logged in successfully as ${res.role}!`);
       if (res.role === 'admin') {
         navigate('/');
+      } else if (res.role === 'security') {
+        navigate('/security');
       } else {
         navigate('/member');
       }
@@ -155,6 +157,17 @@ const Login: React.FC = () => {
               >
                 <UserCheck className="w-4 h-4" /> Member Dashboard
               </button>
+              <button
+                type="button"
+                onClick={() => setLoginRole('security')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                  loginRole === 'security'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm font-extrabold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Shield className="w-4 h-4" /> Security Guard
+              </button>
             </div>
 
             {/* Unified Form */}
@@ -168,14 +181,14 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="peer block w-full pt-5 pb-1.5 px-4 bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 placeholder-transparent font-medium"
-                  placeholder={loginRole === 'admin' ? 'Admin Email' : 'Phone Number or Email'}
+                  placeholder={loginRole === 'admin' ? 'Admin Email' : loginRole === 'security' ? 'Guard Email' : 'Phone Number or Email'}
                   id="login-id-input"
                 />
                 <label
                   htmlFor="login-id-input"
                   className="absolute left-4 top-3.5 text-slate-400 dark:text-slate-550 text-xs transition-all pointer-events-none peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px]"
                 >
-                  {loginRole === 'admin' ? 'Admin Email Address' : 'Phone Number or Email Address'}
+                  {loginRole === 'admin' ? 'Admin Email Address' : loginRole === 'security' ? 'Guard Email Address' : 'Phone Number or Email Address'}
                 </label>
               </div>
 

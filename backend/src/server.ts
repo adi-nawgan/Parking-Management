@@ -23,6 +23,8 @@ import anprRoutes from './routes/anprRoutes';
 import memberRoutes from './routes/memberRoutes';
 import adminReportRoutes from './routes/adminReportRoutes';
 import auditLogRoutes from './routes/auditLogRoutes';
+import securityRoutes from './routes/securityRoutes';
+import guardMgmtRoutes from './routes/guardMgmtRoutes';
 
 connectDB();
 
@@ -51,6 +53,8 @@ app.use('/api/anpr', anprRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/admin/reports', adminReportRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/security', securityRoutes);
+app.use('/api/admin/security-guards', guardMgmtRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
