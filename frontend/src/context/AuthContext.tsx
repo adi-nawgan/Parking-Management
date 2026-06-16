@@ -39,7 +39,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setRole('member');
           setToken('cookie-present');
         } catch (memberErr) {
-          // Not authenticated
+          // Not authenticated — clear stale token if any
+          localStorage.removeItem('spms_admin');
+          localStorage.removeItem('spms_security');
+          localStorage.removeItem('member_spms_data');
+          localStorage.removeItem('auth_token');
           setAdmin(null);
           setSecurity(null);
           setMember(null);

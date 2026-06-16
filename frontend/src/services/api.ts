@@ -25,14 +25,19 @@ API.interceptors.request.use(
 
 API.interceptors.response.use(
   (response: AxiosResponse) => response,
-  (error: { response?: { status: number } }) => {
+  (error: { response?: { status: number; config?: { url?: string } } }) => {
     if (error.response && error.response.status === 401) {
-      console.warn('Unauthorized access detected. Logging out...');
-      localStorage.removeItem('spms_admin');
-      localStorage.removeItem('spms_security');
-      localStorage.removeItem('member_spms_data');
-      localStorage.removeItem('auth_token');
-      window.dispatchEvent(new Event('auth_session_expired'));
+      // Don't clear localStorage during checkAuth probing (profile endpoints)
+      const url = error.response.config?.url || '';
+      const isProfileProbe = url.includes('/auth/profile') || url.includes('/security/profile') || url.includes('/members/profile');
+      if (!isProfileProbe) {
+        console.warn('Unauthorized access detected. Logging out...');
+        localStorage.removeItem('spms_admin');
+        localStorage.removeItem('spms_security');
+        localStorage.removeItem('member_spms_data');
+        localStorage.removeItem('auth_token');
+        window.dispatchEvent(new Event('auth_session_expired'));
+      }
     }
     return Promise.reject(error);
   }
